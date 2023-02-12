@@ -6,6 +6,7 @@ require (
 	github.com/cheetahfox/Iot-local-midware v0.1.2
 	github.com/gofiber/fiber/v2 v2.35.0
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
+	github.com/sanity-io/litter v1.5.5
 )
 
 require (
@@ -15,7 +16,6 @@ require (
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/sanity-io/litter v1.5.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.38.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
