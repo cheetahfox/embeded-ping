@@ -6,7 +6,6 @@ require (
 	github.com/cheetahfox/Iot-local-midware v0.1.2
 	github.com/gofiber/fiber/v2 v2.35.0
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
-	github.com/sanity-io/litter v1.5.5
 )
 
 require (
@@ -20,11 +19,11 @@ require (
 	github.com/valyala/fasthttp v1.38.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
 
 require (
 	github.com/prometheus-community/pro-bing v0.1.0
-	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
 )
