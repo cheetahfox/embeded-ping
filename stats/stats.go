@@ -8,27 +8,36 @@ import (
 	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
+	"github.com/sanity-io/litter"
 )
 
 type hostLongTerm struct {
 	mu           sync.Mutex
 	Drop1000p    float64
+	Latency1000p time.Duration
+	Received1000 int
 	Drop100p     float64
-	Latency1000p float64
-	Latency100p  float64
+	Latency100p  time.Duration
+	Received100  int
 }
 
-var Hosts map[string]hostLongTerm
+var Hosts map[string]*hostLongTerm
+var hostStats map[string]*list.List
 
 type ping struct {
 	rtts          time.Duration
+	received      time.Time
 	replyReceived bool
 }
 
-var hostStats map[string]*list.List
-
+/*
+Package Init:
+	Init the package External data structs
+*/
 func init() {
 	hostStats = make(map[string]*list.List)
+	Hosts = make(map[string]*hostLongTerm)
+	RingHosts = make(map[string]*ringStats)
 }
 
 // Debugging func
@@ -47,6 +56,7 @@ func GetRawStats(host string) {
 // Add a host to the longterm Stats
 func InitHost(host string) {
 	hostStats[host] = list.New()
+	Hosts[host] = new(hostLongTerm)
 }
 
 // Create new ping primatives and append them to the longterm data.
@@ -60,6 +70,7 @@ func ParseStats(s probing.Statistics, host string) error {
 		var p ping
 		p.rtts = rtts
 		p.replyReceived = true
+		p.received = time.Now()
 		hostStats[host].PushFront(p)
 
 	}
@@ -78,6 +89,12 @@ func ParseStats(s probing.Statistics, host string) error {
 	if err != nil {
 		return err
 	}
+
+	err = updateStats(host)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -90,12 +107,14 @@ func tripStats(len int, host string) error {
 		return nil
 	}
 
+	// Trim the list
 	for hlen > len {
 		e := hostStats[host].Back()
 		hostStats[host].Remove(e)
 		hlen--
 	}
 
+	// check that we trimmed to the right size
 	if hlen != len {
 		return errors.New("stats trimmed to the wrong size")
 	}
@@ -104,6 +123,31 @@ func tripStats(len int, host string) error {
 }
 
 func updateStats(host string) error {
+	h := &Hosts[host].mu
 
+	h.Lock()
+
+	litter.Dump(hostStats[host])
+
+	var count int
+	var avg100Latency, avg1000Latency time.Duration
+	// generate stats for the last 100 packets
+	for e := hostStats[host].Front(); count <= 100; e = e.Next() {
+		count++
+		litter.Dump(e)
+
+		p := e.Value.(ping)
+		litter.Dump(p.rtts)
+		/*
+			if e.Value.(ping).replyReceived {
+				r100++
+			}
+		*/
+		avg100Latency = p.rtts + avg100Latency
+	}
+
+	Hosts[host].Latency100p = avg1000Latency / time.Duration(time.Second*100)
+
+	h.Unlock()
 	return nil
 }

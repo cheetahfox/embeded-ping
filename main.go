@@ -18,6 +18,7 @@ Joshua Snyder 9/14/2022
 package main
 
 import (
+	"container/ring"
 	"fmt"
 
 	"github.com/cheetahfox/embeded-ping/stats"
@@ -42,6 +43,10 @@ func pings(count int, host string) (probing.Statistics, string) {
 
 func main() {
 	fmt.Println("Startup")
+
+	ringStats := ring.New(100)
+
+	fmt.Println(ringStats.Len())
 
 	host := "www.google.com"
 
