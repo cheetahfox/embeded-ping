@@ -37,7 +37,7 @@ Package Init:
 func init() {
 	hostStats = make(map[string]*list.List)
 	Hosts = make(map[string]*hostLongTerm)
-	RingHosts = make(map[string]*ringStats)
+	RingHosts = make(map[string]*RingStats)
 }
 
 // Debugging func

@@ -18,47 +18,55 @@ Joshua Snyder 9/14/2022
 package main
 
 import (
-	"container/ring"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/cheetahfox/embeded-ping/stats"
-	probing "github.com/prometheus-community/pro-bing"
 	// "github.com/sanity-io/litter"
 )
 
-func pings(count int, host string) (probing.Statistics, string) {
-	pinger, err := probing.NewPinger(host)
-	if err != nil {
-		panic(err)
+func printTotals(seconds int) {
+	ticker := time.NewTicker(time.Second * time.Duration(seconds))
+	for range ticker.C {
+		for host, _ := range stats.RingHosts {
+			for index := 0; index < len(stats.RingHosts[host].Ips); index++ {
+				stats.RingHosts[host].Ips[index].Mu.Lock()
+				fmt.Println("For host: " + host + " @---> " + stats.RingHosts[host].Ips[index].Ip.String())
+				fmt.Printf("Total Packets send : %d \n", stats.RingHosts[host].Ips[index].TotalSent)
+				fmt.Printf("Total Packets recv : %d \n", stats.RingHosts[host].Ips[index].TotalReceived)
+				fmt.Printf("Total Packets loss : %d \n", stats.RingHosts[host].Ips[index].TotalLoss)
+				stats.RingHosts[host].Ips[index].Mu.Unlock()
+			}
+		}
 	}
-	pinger.Count = count
-	err = pinger.Run() // Blocks until finished.
-	if err != nil {
-		panic(err)
-	}
-
-	stats := pinger.Statistics()
-	return *stats, host
 }
 
 func main() {
 	fmt.Println("Startup")
 
-	ringStats := ring.New(100)
-
-	fmt.Println(ringStats.Len())
-
-	host := "www.google.com"
+	host := "cheetahfox.com"
 
 	stats.InitHost(host)
 
-	err := stats.ParseStats(pings(10, host))
-	if err != nil {
-		fmt.Println("Error parsing pings")
-		fmt.Println(err)
-	}
+	stats.RegisterRingHost(host)
 
-	// litter.Dump(hostStats)
+	go printTotals(30)
 
-	stats.GetRawStats(host)
+	// Listen for Sigint or SigTerm and exit if you get them.
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		fmt.Println()
+		fmt.Println(sig)
+		done <- true
+	}()
+
+	<-done
 }
