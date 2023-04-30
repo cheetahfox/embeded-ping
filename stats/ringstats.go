@@ -2,6 +2,7 @@ package stats
 
 import (
 	"container/ring"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -14,8 +15,8 @@ import (
 type ipRings struct {
 	Mu              sync.Mutex
 	Ip              net.IP
-	Stats100        ring.Ring
-	Stats1k         ring.Ring
+	Stats100        *ring.Ring
+	Stats1k         *ring.Ring
 	Packetloss100   float64
 	Packetloss1000  float64
 	TotalSent       int
@@ -52,13 +53,19 @@ func RegisterRingHost(host string) error {
 	for _, ip := range ips {
 		var newRing ipRings
 		newRing.Ip = ip
-		newRing.Stats1k = *ring.New(1000)
-		newRing.Stats100 = *ring.New(100)
+		newRing.Stats1k = ring.New(1000)
+		newRing.Stats100 = ring.New(100)
 
-		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the data.
+		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the ring.
 		RingHosts[host].Ips = append(RingHosts[host].Ips, newRing)
 
 		fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
+	}
+
+	for x := 0; x < len(RingHosts[host].Ips); x++ {
+		RingHosts[host].Ips[x].Stats100 = ring.New(100)
+		RingHosts[host].Ips[x].Stats1k = ring.New(1000)
+		fmt.Println(RingHosts[host].Ips[x].Stats100.Len())
 	}
 
 	fmt.Println("---- Done adding ----")
@@ -133,6 +140,12 @@ struct (that name seems bad now). But I will be reading this from outside this p
 won't hurt to lock the data struct when accessing it.
 */
 func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTime time.Time) {
+	// Generate arrays of ping packets for storage long term
+	pingPackets, err := generatePingPackets(s, startTime)
+	if err != nil {
+		fmt.Println("unable to generate ping packets")
+	}
+
 	pIp.Mu.Lock()
 	defer pIp.Mu.Unlock()
 
@@ -142,4 +155,79 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.TotalLoss = pIp.TotalSent - pIp.TotalReceived
 	pIp.TotalDuplicates = pIp.TotalDuplicates + s.PacketsRecvDuplicates
 
+	for _, ping := range pingPackets {
+		err := ringAddStats(ping, pIp.Stats100)
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = ringAddStats(ping, pIp.Stats1k)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+/*
+Take a probing.Statistics and return an slice of pings.
+If there are no pings in the out we still create blank packets
+Also we don't a super accurate sent time so we are just going add 1000ms to the start
+for every additional packet in s. Luckly since the plan is to run only 1 packet pings
+the startTime should be very close to the true sent. But this might be an issue if we
+many packets in a s stats.
+*/
+func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, error) {
+	var packets []ping
+
+	// For packets that are received for real
+	for i := range s.Rtts {
+		var p ping
+		p.rtts = s.Rtts[i]
+		p.sent = startTime.Add(time.Duration(i * int(time.Second)))
+		p.replyReceived = true
+
+		packets = append(packets, p)
+	}
+
+	return packets, nil
+}
+
+/*
+Add a ping packet into a stats ring; insert first into empty slots.
+Or into slots older than the transmit time + ring size (100/1000 seconds).
+*/
+func ringAddStats(packet ping, stats *ring.Ring) error {
+	ringSize := stats.Len()
+	// Set an expiration time of for 100 or 1000 seconds Before the packet was sent.
+	expireTime := packet.sent.Add(time.Duration(-ringSize) * time.Second)
+	var inserted bool
+
+	for i := 0; i < ringSize; i++ {
+		// Checking that we have a ping packet in the ring
+		switch v := stats.Value.(type) {
+		case ping:
+			if stats.Value.(ping).sent.After(expireTime) {
+				stats.Value = packet
+				inserted = true
+			}
+		case int:
+			fmt.Println(v)
+		// blank value so we can insert.
+		default:
+			stats.Value = packet
+			inserted = true
+		}
+
+		if inserted {
+			break
+		}
+
+		stats.Next()
+	}
+
+	if !inserted {
+		err := errors.New("unable to insert into ring")
+		return err
+	}
+
+	return nil
 }

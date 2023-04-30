@@ -27,6 +27,7 @@ var hostStats map[string]*list.List
 type ping struct {
 	rtts          time.Duration
 	received      time.Time
+	sent          time.Time
 	replyReceived bool
 }
 
