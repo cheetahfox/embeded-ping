@@ -39,6 +39,8 @@ func printTotals(seconds int) {
 				fmt.Printf("Total Packets send : %d \n", stats.RingHosts[host].Ips[index].TotalSent)
 				fmt.Printf("Total Packets recv : %d \n", stats.RingHosts[host].Ips[index].TotalReceived)
 				fmt.Printf("Total Packets loss : %d \n", stats.RingHosts[host].Ips[index].TotalLoss)
+				fmt.Printf("100 Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss100)
+				fmt.Printf("1k Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss1000)
 				stats.RingHosts[host].Ips[index].Mu.Unlock()
 			}
 		}
@@ -48,7 +50,7 @@ func printTotals(seconds int) {
 func main() {
 	fmt.Println("Startup")
 
-	host := "cheetahfox.com"
+	host := "205.159.243.144"
 
 	stats.InitHost(host)
 

@@ -111,7 +111,10 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 	}
 }
 
-// Func to kick off the pingThreads for the first time. Can be called directly from a future API
+/*
+Func to kick off the pingThreads for the first time. Can be called directly from a future API
+For now only call with 1 packet and 1 second.
+*/
 func ringCollector(host string, seconds int, packets int) {
 	// Loop this way so we aren't copying the RingStats struct and can reference it directly
 	for index := 0; index < len(RingHosts[host].Ips); index++ {
@@ -165,6 +168,10 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 			fmt.Println(err)
 		}
 	}
+
+	pIp.Packetloss100 = genPacketloss(pIp.Stats100)
+	pIp.Packetloss1000 = genPacketloss(pIp.Stats1k)
+
 }
 
 /*
@@ -177,15 +184,28 @@ many packets in a s stats.
 */
 func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, error) {
 	var packets []ping
-
-	// For packets that are received for real
+	/*
+		For packets that are received for real; If we are getting stats for a single packet (the default).
+		Then this will loop only once but if we have multiple packets we are going to assume they are
+		sent once a second. Sadly we don't get the real time in the Statistics.
+	*/
 	for i := range s.Rtts {
 		var p ping
 		p.rtts = s.Rtts[i]
-		p.sent = startTime.Add(time.Duration(i * int(time.Second)))
+		p.sent = startTime.Add(time.Duration(i) * time.Second)
 		p.replyReceived = true
-
 		packets = append(packets, p)
+	}
+
+	if s.PacketLoss > 0 {
+		droppedPackets := s.PacketsSent - s.PacketsRecv
+		for x := 0; x < droppedPackets; x++ {
+			var p ping
+			// We are taking the number of packets we got and adding the dropped packets at the end of the window
+			p.sent = startTime.Add(time.Duration(len(s.Rtts)+x) * time.Second)
+			p.replyReceived = false
+			packets = append(packets, p)
+		}
 	}
 
 	return packets, nil
@@ -230,4 +250,28 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 	}
 
 	return nil
+}
+
+/*
+Recalculate current packet loss from the long term statistics
+*/
+func genPacketloss(ring *ring.Ring) float64 {
+	var packetLoss float64
+	var droppedPackets int
+	ringSize := ring.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := ring.Value.(type) {
+		case ping:
+			if !ring.Value.(ping).replyReceived {
+				droppedPackets++
+			}
+		case int:
+			fmt.Println(v)
+		default:
+		}
+	}
+
+	packetLoss = float64(droppedPackets) / float64(ringSize)
+
+	return packetLoss
 }
