@@ -62,12 +62,6 @@ func RegisterRingHost(host string) error {
 		fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
 	}
 
-	for x := 0; x < len(RingHosts[host].Ips); x++ {
-		RingHosts[host].Ips[x].Stats100 = ring.New(100)
-		RingHosts[host].Ips[x].Stats1k = ring.New(1000)
-		fmt.Println(RingHosts[host].Ips[x].Stats100.Len())
-	}
-
 	fmt.Println("---- Done adding ----")
 
 	ringCollector(host, 1, 1)
@@ -98,7 +92,7 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 			return
 		}
 		pinger.Count = packets
-		pinger.Timeout = time.Second * time.Duration(5)
+		pinger.Timeout = time.Second * time.Duration(1)
 		err = pinger.Run() // Blocks until finished.
 		if err != nil {
 			fmt.Println(err)
@@ -162,10 +156,12 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 		err := ringAddStats(ping, pIp.Stats100)
 		if err != nil {
 			fmt.Println(err)
+			fmt.Println(" Host: " + hostname + " --->  100 ring")
 		}
 		err = ringAddStats(ping, pIp.Stats1k)
 		if err != nil {
 			fmt.Println(err)
+			fmt.Println(" Host: " + hostname + " ---> 1000 ring")
 		}
 	}
 
@@ -221,13 +217,15 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 	expireTime := packet.sent.Add(time.Duration(-ringSize) * time.Second)
 	var inserted bool
 
-	for i := 0; i < ringSize; i++ {
+	// yes, we are going all the way around the ring + one element.
+	for i := 0; i <= ringSize; i++ {
 		// Checking that we have a ping packet in the ring
 		switch v := stats.Value.(type) {
 		case ping:
-			if stats.Value.(ping).sent.After(expireTime) {
+			if stats.Value.(ping).sent.Before(expireTime) {
 				stats.Value = packet
 				inserted = true
+				fmt.Println("Replace insert")
 			}
 		case int:
 			fmt.Println(v)
@@ -241,10 +239,13 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 			break
 		}
 
-		stats.Next()
+		stats = stats.Next()
 	}
 
 	if !inserted {
+		fmt.Println("Expire time      : " + expireTime.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		fmt.Println("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		fmt.Println("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		err := errors.New("unable to insert into ring")
 		return err
 	}
@@ -269,8 +270,10 @@ func genPacketloss(ring *ring.Ring) float64 {
 			fmt.Println(v)
 		default:
 		}
+		ring = ring.Next()
 	}
 
+	//fmt.Printf("Found dropped packets = %d\n", droppedPackets)
 	packetLoss = float64(droppedPackets) / float64(ringSize)
 
 	return packetLoss
