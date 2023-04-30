@@ -225,7 +225,6 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 			if stats.Value.(ping).sent.Before(expireTime) {
 				stats.Value = packet
 				inserted = true
-				fmt.Println("Replace insert")
 			}
 		case int:
 			fmt.Println(v)

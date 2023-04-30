@@ -34,7 +34,6 @@ func printTotals(seconds int) {
 		for host := range stats.RingHosts {
 			for index := 0; index < len(stats.RingHosts[host].Ips); index++ {
 				stats.RingHosts[host].Ips[index].Mu.Lock()
-				fmt.Println("PrintTotal Locked")
 				fmt.Println("For host: " + host + " @---> " + stats.RingHosts[host].Ips[index].Ip.String())
 				fmt.Printf("Total Packets send : %d \n", stats.RingHosts[host].Ips[index].TotalSent)
 				fmt.Printf("Total Packets recv : %d \n", stats.RingHosts[host].Ips[index].TotalReceived)
