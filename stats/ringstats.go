@@ -13,17 +13,19 @@ import (
 
 // Packetloss is stored as a 1 = 100% and 0 = 0% loss.
 type ipRings struct {
-	Mu              sync.Mutex
-	Ip              net.IP
-	Stats100        *ring.Ring
-	Stats1k         *ring.Ring
-	Packetloss100   float64
-	Packetloss1000  float64
-	TotalSent       int
-	TotalLoss       int
-	TotalReceived   int
-	TotalDuplicates int
-	shutdown        chan bool
+	Mu               sync.Mutex
+	Ip               net.IP
+	Stats100         *ring.Ring
+	Stats1k          *ring.Ring
+	Packetloss100    float64
+	Packetloss1000   float64
+	TotalSent        int
+	TotalLoss        int
+	TotalReceived    int
+	TotalDuplicates  int
+	Avg1000LatencyNs time.Duration
+	Avg100LatencyNs  time.Duration
+	shutdown         chan bool
 }
 
 type RingStats struct {
@@ -167,6 +169,8 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 
 	pIp.Packetloss100 = genPacketloss(pIp.Stats100)
 	pIp.Packetloss1000 = genPacketloss(pIp.Stats1k)
+	pIp.Avg100LatencyNs = genAvgLatency(pIp.Stats100)
+	pIp.Avg1000LatencyNs = genAvgLatency(pIp.Stats1k)
 
 }
 
@@ -213,8 +217,9 @@ Or into slots older than the transmit time + ring size (100/1000 seconds).
 */
 func ringAddStats(packet ping, stats *ring.Ring) error {
 	ringSize := stats.Len()
-	// Set an expiration time of for 100 or 1000 seconds Before the packet was sent.
-	expireTime := packet.sent.Add(time.Duration(-ringSize) * time.Second)
+	expireLen := ringSize - 1
+	// Set an expiration time of for 101 or 1001 seconds Before the packet was sent.
+	expireTime := packet.sent.Add(time.Duration(-expireLen) * time.Second)
 	var inserted bool
 
 	// yes, we are going all the way around the ring + one element.
@@ -276,4 +281,28 @@ func genPacketloss(ring *ring.Ring) float64 {
 	packetLoss = float64(droppedPackets) / float64(ringSize)
 
 	return packetLoss
+}
+
+func genAvgLatency(ring *ring.Ring) time.Duration {
+	var totalTime time.Duration
+	var emptyPackets int
+
+	ringSize := ring.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := ring.Value.(type) {
+		case ping:
+			if ring.Value.(ping).replyReceived {
+				totalTime = v.rtts + totalTime
+			}
+		case int:
+			fmt.Println(v)
+		default:
+			emptyPackets++
+		}
+		ring = ring.Next()
+	}
+
+	// time.Duration is really a int64 of NanoSeconds so we can do this math here
+	avg := int64(totalTime) / int64(ringSize-emptyPackets)
+	return time.Duration(avg)
 }

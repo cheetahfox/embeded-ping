@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/embeded-ping/influxdb"
 	"github.com/cheetahfox/embeded-ping/stats"
 	// "github.com/sanity-io/litter"
 )
@@ -40,6 +42,9 @@ func printTotals(seconds int) {
 				fmt.Printf("Total Packets loss : %d \n", stats.RingHosts[host].Ips[index].TotalLoss)
 				fmt.Printf("100 Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss100)
 				fmt.Printf("1k Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss1000)
+				fmt.Println("---")
+				fmt.Println("100 Packet Latency : " + stats.RingHosts[host].Ips[index].Avg100LatencyNs.String())
+				fmt.Println("1k Packet Latency  : " + stats.RingHosts[host].Ips[index].Avg1000LatencyNs.String())
 				stats.RingHosts[host].Ips[index].Mu.Unlock()
 			}
 		}
@@ -49,13 +54,21 @@ func printTotals(seconds int) {
 func main() {
 	fmt.Println("Startup")
 
-	host := "205.159.243.144"
+	hosts := []string{"173.174.128.1", "8.8.8.8", "205.159.243.1"}
 
-	stats.InitHost(host)
+	for _, host := range hosts {
+		stats.InitHost(host)
+		stats.RegisterRingHost(host)
+	}
 
-	stats.RegisterRingHost(host)
+	influx := config.InfluxEnvStartup()
+	influxdb.NewInfluxConnection(influx)
 
 	go printTotals(30)
+	// What a hack for now...
+	time.Sleep(time.Duration(time.Second * 1))
+	fmt.Println("Startup sleeping")
+	influxdb.WriteRingMetrics(15)
 
 	// Listen for Sigint or SigTerm and exit if you get them.
 	sigs := make(chan os.Signal, 1)
@@ -71,4 +84,6 @@ func main() {
 	}()
 
 	<-done
+	fmt.Println("Shutting down...")
+	influxdb.DisconnectInflux()
 }

@@ -10,17 +10,35 @@ import (
 )
 
 type Configuration struct {
-	FiberConfig    fiber.Config
+	FiberConfig fiber.Config
+}
+
+type InfluxConfiguration struct {
 	Bucket         string
+	InfluxMaxError int
 	InfluxdbServer string
 	Org            string
 	Token          string
-	InfluxMaxError int
 }
 
 // Set configuration options from Env values and setup the Fiber options
-func Startup() Configuration {
+func FiberStartup() Configuration {
 	var conf Configuration
+
+	// Fiber Setup
+	conf.FiberConfig = fiber.Config{
+		CaseSensitive: true,
+		StrictRouting: true,
+		ServerHeader:  "Emb-Ping",
+		AppName:       "Embeded Ping v0.01",
+		ReadTimeout:   (30 * time.Second),
+	}
+
+	return conf
+}
+
+func InfluxEnvStartup() InfluxConfiguration {
+	var influxconf InfluxConfiguration
 
 	requiredEnvVars := []string{
 		"INFLUX_SERVER", // Influxdb server url including port number
@@ -37,26 +55,17 @@ func Startup() Configuration {
 		}
 	}
 
-	conf.InfluxMaxError = 10
+	influxconf.InfluxMaxError = 10
 	influxerrors, err := strconv.Atoi(os.Getenv("DB_MAX_ERROR"))
 	if err != nil {
-		conf.InfluxMaxError = influxerrors
-	}
-
-	// Fiber Setup
-	conf.FiberConfig = fiber.Config{
-		CaseSensitive: true,
-		StrictRouting: true,
-		ServerHeader:  "Emb-Ping",
-		AppName:       "Embeded Ping v0.01",
-		ReadTimeout:   (30 * time.Second),
+		influxconf.InfluxMaxError = influxerrors
 	}
 
 	// Influxdb Settings
-	conf.Token = os.Getenv("INFLUX_TOKEN")
-	conf.Bucket = os.Getenv("INFLUX_BUCKET")
-	conf.Org = os.Getenv("INFLUX_ORG")
-	conf.InfluxdbServer = os.Getenv("INFLUX_SERVER")
+	influxconf.Token = os.Getenv("INFLUX_TOKEN")
+	influxconf.Bucket = os.Getenv("INFLUX_BUCKET")
+	influxconf.Org = os.Getenv("INFLUX_ORG")
+	influxconf.InfluxdbServer = os.Getenv("INFLUX_SERVER")
 
-	return conf
+	return influxconf
 }
