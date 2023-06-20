@@ -1,3 +1,9 @@
+/*
+Here we store all of the packet loss and latency data for each host. We store the packets using a
+ring buffer so we can keep track of the last 100 and 1000 packets. We also store the total number of packets dropped.
+
+This is mostly an attempt for me to use a complicated memory struct vs a more standard slice.
+*/
 package stats
 
 import (
@@ -293,6 +299,8 @@ func genAvgLatency(ring *ring.Ring) time.Duration {
 		case ping:
 			if ring.Value.(ping).replyReceived {
 				totalTime = v.rtts + totalTime
+			} else {
+				emptyPackets++
 			}
 		case int:
 			fmt.Println(v)
