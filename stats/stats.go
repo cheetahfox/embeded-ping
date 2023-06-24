@@ -2,7 +2,6 @@ package stats
 
 import (
 	"container/list"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -35,19 +34,6 @@ func init() {
 	hostStats = make(map[string]*list.List)
 	Hosts = make(map[string]*hostLongTerm)
 	RingHosts = make(map[string]*RingStats)
-}
-
-// Debugging func
-func GetRawStats(host string) {
-	fmt.Println("Stats for host: ", host)
-	for e := hostStats[host].Front(); e != nil; e = e.Next() {
-		p := e.Value.(ping)
-
-		if p.replyReceived {
-			fmt.Println(p.rtts)
-
-		}
-	}
 }
 
 // Add a host to the longterm Stats

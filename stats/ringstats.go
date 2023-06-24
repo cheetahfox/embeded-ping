@@ -252,6 +252,10 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 		stats = stats.Next()
 	}
 
+	/*
+		If we get all the way around the ring and we haven't inserted the packet then we have a problem.
+		We should never get here but if we do we need to know about it. So here is some debug info.
+	*/
 	if !inserted {
 		fmt.Println("Expire time      : " + expireTime.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		fmt.Println("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
