@@ -54,7 +54,7 @@ func printTotals(seconds int) {
 func main() {
 	fmt.Println("Startup")
 
-	hosts := []string{"173.174.128.1", "8.8.8.8", "205.159.243.1"}
+	hosts := config.GetHosts()
 
 	for _, host := range hosts {
 		stats.InitHost(host)

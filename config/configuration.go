@@ -37,6 +37,23 @@ func FiberStartup() Configuration {
 	return conf
 }
 
+// Get Hosts from Env and return them as a slice
+func GetHosts() []string {
+	var hosts []string
+
+	// Get Hosts from Env
+	hostsEnv := os.Getenv("HOSTS")
+	if hostsEnv == "" {
+		log.Fatal("Missing HOSTS Enviroment var")
+	}
+
+	// Split the string into a slice
+	hosts = append(hosts, hostsEnv)
+
+	return hosts
+}
+
+// Set configuration options from Env values and setup the Fiber options
 func InfluxEnvStartup() InfluxConfiguration {
 	var influxconf InfluxConfiguration
 
