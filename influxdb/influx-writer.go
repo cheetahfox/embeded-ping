@@ -11,8 +11,7 @@ import (
 )
 
 /*
-Creates a new
-
+Creates a new InfluxDB connection and stores it in the global variable DbWrite
 */
 func NewInfluxConnection(config config.InfluxConfiguration) {
 	err := ConnectInflux(config)
@@ -21,6 +20,7 @@ func NewInfluxConnection(config config.InfluxConfiguration) {
 	}
 }
 
+// This function will write the metrics to InfluxDB every X seconds
 func WriteRingMetrics(frequency int) {
 	ticker := time.NewTicker(time.Second * time.Duration(frequency))
 	for range ticker.C {
@@ -38,7 +38,6 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "100 Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg1000LatencyNs.Nanoseconds()))
 				stats.RingHosts[host].Ips[index].Mu.Unlock()
-				fmt.Println("--- Done Write ---")
 			}
 		}
 	}
