@@ -293,6 +293,9 @@ func genPacketloss(ring *ring.Ring) float64 {
 	return packetLoss
 }
 
+/*
+Recalculate current average latency from the long term statistics
+*/
 func genAvgLatency(ring *ring.Ring) time.Duration {
 	var totalTime time.Duration
 	var emptyPackets int

@@ -30,7 +30,7 @@ func FiberStartup() Configuration {
 		CaseSensitive: true,
 		StrictRouting: true,
 		ServerHeader:  "Emb-Ping",
-		AppName:       "Embeded Ping v0.01",
+		AppName:       "Embeded Ping v1.0.1",
 		ReadTimeout:   (30 * time.Second),
 	}
 
