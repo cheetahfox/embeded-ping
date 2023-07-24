@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/cheetahfox/Iot-local-midware v0.1.2
+	github.com/davecgh/go-spew v1.1.1
 	github.com/gofiber/fiber/v2 v2.43.0
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
-	github.com/sanity-io/litter v1.5.5
 )
 
 require (

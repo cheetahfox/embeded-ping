@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -39,7 +40,6 @@ func FiberStartup() Configuration {
 
 // Get Hosts from Env and return them as a slice
 func GetHosts() []string {
-	var hosts []string
 
 	// Get Hosts from Env
 	hostsEnv := os.Getenv("HOSTS")
@@ -47,9 +47,7 @@ func GetHosts() []string {
 		log.Fatal("Missing HOSTS Enviroment var")
 	}
 
-	// Split the string into a slice
-	hosts = append(hosts, hostsEnv)
-
+	hosts := strings.Fields(hostsEnv)
 	return hosts
 }
 
