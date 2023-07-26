@@ -20,7 +20,7 @@ var dbclient influxdb2.Client
 func ConnectInflux(config config.InfluxConfiguration) error {
 	// Check if the Influxdb server is valid
 	if !dnsCheck(config.InfluxdbServer) {
-		return fmt.Errorf("Influxdb server %s is not valid", config.InfluxdbServer)
+		return fmt.Errorf("influxdb server %s is not valid", config.InfluxdbServer)
 	}
 
 	dbclient = influxdb2.NewClient(config.InfluxdbServer, config.Token)
