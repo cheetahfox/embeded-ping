@@ -77,10 +77,10 @@ func DbHealthCheck(sleepTime time.Duration) bool {
 // Check for valid DNS
 func dnsCheck(host string) bool {
 	_, err := net.LookupHost(host)
-	if err != nil {
-		return false
+	if err == nil {
+		return true
 	}
-	return true
+	return false
 }
 
 func DisconnectInflux() {
