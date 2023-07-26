@@ -3,6 +3,7 @@ package influxdb
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -17,6 +18,11 @@ var DbWrite api.WriteAPI
 var dbclient influxdb2.Client
 
 func ConnectInflux(config config.InfluxConfiguration) error {
+	// Check if the Influxdb server is valid
+	if !dnsCheck(config.InfluxdbServer) {
+		return fmt.Errorf("Influxdb server %s is not valid", config.InfluxdbServer)
+	}
+
 	dbclient = influxdb2.NewClient(config.InfluxdbServer, config.Token)
 	dbhealth, err := dbclient.Health(context.Background())
 	if (err != nil) && dbhealth.Status == domain.HealthCheckStatusFail {
@@ -63,6 +69,15 @@ func DbHealthCheck(sleepTime time.Duration) bool {
 	time.Sleep(sleepTime)
 	dbhealth, err := dbclient.Health(context.Background())
 	if (err != nil) || dbhealth.Status == domain.HealthCheckStatusFail {
+		return false
+	}
+	return true
+}
+
+// Check for valid DNS
+func dnsCheck(host string) bool {
+	_, err := net.LookupHost(host)
+	if err != nil {
 		return false
 	}
 	return true

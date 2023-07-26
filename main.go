@@ -64,8 +64,8 @@ func main() {
 	influx := config.InfluxEnvStartup()
 	influxdb.NewInfluxConnection(influx)
 
-	go printTotals(30)
-	// What a hack for now...
+	// go printTotals(30)
+	// What a hack for now... we need to wait for the influxdb to connect before we can start sending data.
 	time.Sleep(time.Duration(time.Second * 1))
 	fmt.Println("Startup sleeping")
 	influxdb.WriteRingMetrics(15)
