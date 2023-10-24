@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"time"
 
@@ -75,8 +76,14 @@ func DbHealthCheck(sleepTime time.Duration) bool {
 }
 
 // Check for valid DNS
-func dnsCheck(host string) bool {
-	_, err := net.LookupHost(host)
+func dnsCheck(dburl string) bool {
+
+	url, err := url.Parse(dburl)
+	if err != nil {
+		return false
+	}
+
+	_, err = net.LookupHost(url.Hostname())
 	if err == nil {
 		return true
 	}
