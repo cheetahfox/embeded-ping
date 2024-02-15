@@ -27,6 +27,7 @@ import (
 	"github.com/cheetahfox/embeded-ping/config"
 	"github.com/cheetahfox/embeded-ping/influxdb"
 	"github.com/cheetahfox/embeded-ping/stats"
+	"github.com/labstack/gommon/log"
 	// "github.com/sanity-io/litter"
 )
 
@@ -53,6 +54,10 @@ func printTotals(seconds int) {
 
 func main() {
 	fmt.Println("Startup")
+	err := config.Startup()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	hosts := config.GetHosts()
 

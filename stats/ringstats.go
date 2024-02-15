@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cheetahfox/embeded-ping/config"
 	probing "github.com/prometheus-community/pro-bing"
 )
 
@@ -23,6 +24,8 @@ type ipRings struct {
 	Ip               net.IP
 	Stats100         *ring.Ring
 	Stats1k          *ring.Ring
+	Stats15          *ring.Ring
+	Packetloss15     float64
 	Packetloss100    float64
 	Packetloss1000   float64
 	TotalSent        int
@@ -31,6 +34,10 @@ type ipRings struct {
 	TotalDuplicates  int
 	Avg1000LatencyNs time.Duration
 	Avg100LatencyNs  time.Duration
+	Avg15LatencyNs   time.Duration
+	Max1000LatencyNs time.Duration
+	Max100LatencyNs  time.Duration
+	Max15LatencyNs   time.Duration
 	shutdown         chan bool
 }
 
@@ -63,6 +70,7 @@ func RegisterRingHost(host string) error {
 		newRing.Ip = ip
 		newRing.Stats1k = ring.New(1000)
 		newRing.Stats100 = ring.New(100)
+		newRing.Stats15 = ring.New(15)
 
 		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the ring.
 		RingHosts[host].Ips = append(RingHosts[host].Ips, newRing)
@@ -81,7 +89,6 @@ func RegisterRingHost(host string) error {
 Low Level ping thread, Takes seconds between runs and number of packets to send.
 Can be shutdown by writing (technically any value to the shutdown channel) runs
 forever until shutdown.
-
 */
 func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 	ticker := time.NewTicker(time.Second * time.Duration(seconds))
@@ -100,7 +107,7 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 			return
 		}
 		pinger.Count = packets
-		pinger.Timeout = time.Second * time.Duration(1)
+		pinger.Timeout = time.Second * time.Duration(config.Config.ProbeTimeout)
 		err = pinger.Run() // Blocks until finished.
 		if err != nil {
 			fmt.Println(err)
@@ -171,12 +178,24 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 			fmt.Println(err)
 			fmt.Println(" Host: " + hostname + " ---> 1000 ring")
 		}
+		err = ringAddStats(ping, pIp.Stats15)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println(" Host: " + hostname + " ---> 15 ring")
+		}
 	}
 
+	pIp.Packetloss15 = genPacketloss(pIp.Stats15)
 	pIp.Packetloss100 = genPacketloss(pIp.Stats100)
 	pIp.Packetloss1000 = genPacketloss(pIp.Stats1k)
+
+	pIp.Avg15LatencyNs = genAvgLatency(pIp.Stats15)
 	pIp.Avg100LatencyNs = genAvgLatency(pIp.Stats100)
 	pIp.Avg1000LatencyNs = genAvgLatency(pIp.Stats1k)
+
+	pIp.Max15LatencyNs = genMaxLatency(pIp.Stats15)
+	pIp.Max100LatencyNs = genMaxLatency(pIp.Stats100)
+	pIp.Max1000LatencyNs = genMaxLatency(pIp.Stats1k)
 
 }
 
@@ -320,4 +339,28 @@ func genAvgLatency(ring *ring.Ring) time.Duration {
 	// time.Duration is really a int64 of NanoSeconds so we can do this math here
 	avg := int64(totalTime) / int64(ringSize-emptyPackets)
 	return time.Duration(avg)
+}
+
+/*
+Return the max latency from the long term statistics
+*/
+func genMaxLatency(ring *ring.Ring) time.Duration {
+	var maxLatency time.Duration
+	ringSize := ring.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := ring.Value.(type) {
+		case ping:
+			if ring.Value.(ping).replyReceived {
+				if v.rtts > maxLatency {
+					maxLatency = v.rtts
+				}
+			}
+		case int:
+			fmt.Println(v)
+		default:
+		}
+		ring = ring.Next()
+	}
+
+	return maxLatency
 }

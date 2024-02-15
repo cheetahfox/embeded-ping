@@ -11,7 +11,10 @@ import (
 )
 
 type Configuration struct {
-	FiberConfig fiber.Config
+	FiberConfig   fiber.Config
+	Debug         bool
+	ProbeInterval int
+	ProbeTimeout  int
 }
 
 type InfluxConfiguration struct {
@@ -22,12 +25,14 @@ type InfluxConfiguration struct {
 	Token          string
 }
 
-// Set configuration options from Env values and setup the Fiber options
-func FiberStartup() Configuration {
-	var conf Configuration
+var (
+	Config Configuration
+)
 
+// Set configuration options from Env values and setup the Fiber options
+func Startup() error {
 	// Fiber Setup
-	conf.FiberConfig = fiber.Config{
+	Config.FiberConfig = fiber.Config{
 		CaseSensitive: true,
 		StrictRouting: true,
 		ServerHeader:  "Emb-Ping",
@@ -35,7 +40,27 @@ func FiberStartup() Configuration {
 		ReadTimeout:   (30 * time.Second),
 	}
 
-	return conf
+	if os.Getenv("DEBUG") == "true" {
+		Config.Debug = true
+	}
+
+	// Set the Probe Interval
+	probeInterval, err := strconv.Atoi(os.Getenv("PROBE_INTERVAL"))
+	if err != nil {
+		Config.ProbeInterval = 15
+	} else {
+		Config.ProbeInterval = probeInterval
+	}
+
+	// Set the Probe Timeout
+	probeTimeout, err := strconv.Atoi(os.Getenv("PROBE_TIMEOUT"))
+	if err != nil {
+		Config.ProbeTimeout = 1
+	} else {
+		Config.ProbeTimeout = probeTimeout
+	}
+
+	return nil
 }
 
 // Get Hosts from Env and return them as a slice
