@@ -33,10 +33,22 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "Total Packets Sent", float64(stats.RingHosts[host].Ips[index].TotalSent))
 				writeInflux("longping", hn, ip, "Total Packets Revc", float64(stats.RingHosts[host].Ips[index].TotalReceived))
 				writeInflux("longping", hn, ip, "Total Packets Loss", float64(stats.RingHosts[host].Ips[index].TotalLoss))
+
+				writeInflux("longping", hn, ip, "15 Packet loss", stats.RingHosts[host].Ips[index].Packetloss15)
 				writeInflux("longping", hn, ip, "100 Packet loss", stats.RingHosts[host].Ips[index].Packetloss100)
 				writeInflux("longping", hn, ip, "1k Packet loss", stats.RingHosts[host].Ips[index].Packetloss1000)
+
+				writeInflux("longping", hn, ip, "15 Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg15LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "100 Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg1000LatencyNs.Nanoseconds()))
+
+				writeInflux("longping", hn, ip, "15 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max15LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max100LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max1000LatencyNs.Nanoseconds()))
+
+				writeInflux("longping", hn, ip, "15 Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter15LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "100 Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "1k Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
 				stats.RingHosts[host].Ips[index].Mu.Unlock()
 			}
 		}
@@ -44,8 +56,10 @@ func WriteRingMetrics(frequency int) {
 }
 
 func writeInflux(measure string, host string, ip net.IP, metric string, value float64) {
-	s := fmt.Sprintf("%f", value)
-	fmt.Println("Writing point --->  Measure: " + measure + " Host: " + host + " Metric: " + metric + " Value: " + s)
+	if config.Config.Debug {
+		s := fmt.Sprintf("%f", value)
+		fmt.Println("Writing point --->  Measure: " + measure + " Host: " + host + " Metric: " + metric + " Value: " + s)
+	}
 
 	p := influxdb2.NewPointWithMeasurement(measure)
 

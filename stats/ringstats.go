@@ -20,25 +20,28 @@ import (
 
 // Packetloss is stored as a 1 = 100% and 0 = 0% loss.
 type ipRings struct {
-	Mu               sync.Mutex
-	Ip               net.IP
-	Stats100         *ring.Ring
-	Stats1k          *ring.Ring
-	Stats15          *ring.Ring
-	Packetloss15     float64
-	Packetloss100    float64
-	Packetloss1000   float64
-	TotalSent        int
-	TotalLoss        int
-	TotalReceived    int
-	TotalDuplicates  int
-	Avg1000LatencyNs time.Duration
-	Avg100LatencyNs  time.Duration
-	Avg15LatencyNs   time.Duration
-	Max1000LatencyNs time.Duration
-	Max100LatencyNs  time.Duration
-	Max15LatencyNs   time.Duration
-	shutdown         chan bool
+	Mu                  sync.Mutex
+	Ip                  net.IP
+	Stats100            *ring.Ring
+	Stats1k             *ring.Ring
+	Stats15             *ring.Ring
+	Packetloss15        float64
+	Packetloss100       float64
+	Packetloss1000      float64
+	TotalSent           int
+	TotalLoss           int
+	TotalReceived       int
+	TotalDuplicates     int
+	Avg1000LatencyNs    time.Duration
+	Avg100LatencyNs     time.Duration
+	Avg15LatencyNs      time.Duration
+	Max1000LatencyNs    time.Duration
+	Max100LatencyNs     time.Duration
+	Max15LatencyNs      time.Duration
+	Jitter1000LatencyNs time.Duration
+	Jitter100LatencyNs  time.Duration
+	Jitter15LatencyNs   time.Duration
+	shutdown            chan bool
 }
 
 type RingStats struct {
@@ -193,10 +196,13 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Avg100LatencyNs = genAvgLatency(pIp.Stats100)
 	pIp.Avg1000LatencyNs = genAvgLatency(pIp.Stats1k)
 
+	pIp.Jitter15LatencyNs = genJitterLatency(pIp.Stats15, pIp.Avg15LatencyNs)
+	pIp.Jitter100LatencyNs = genJitterLatency(pIp.Stats100, pIp.Avg100LatencyNs)
+	pIp.Jitter1000LatencyNs = genJitterLatency(pIp.Stats1k, pIp.Avg1000LatencyNs)
+
 	pIp.Max15LatencyNs = genMaxLatency(pIp.Stats15)
 	pIp.Max100LatencyNs = genMaxLatency(pIp.Stats100)
 	pIp.Max1000LatencyNs = genMaxLatency(pIp.Stats1k)
-
 }
 
 /*
@@ -363,4 +369,64 @@ func genMaxLatency(ring *ring.Ring) time.Duration {
 	}
 
 	return maxLatency
+}
+
+/*
+Return the min latency from the long term statistics
+*/
+func genMinLatency(ring *ring.Ring) time.Duration {
+	var minLatency time.Duration
+	ringSize := ring.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := ring.Value.(type) {
+		case ping:
+			if ring.Value.(ping).replyReceived {
+				if v.rtts < minLatency {
+					minLatency = v.rtts
+				}
+			}
+		case int:
+			fmt.Println(v)
+		default:
+		}
+		ring = ring.Next()
+	}
+
+	return minLatency
+}
+
+/*
+Return the standard deviation of the latency from the long term statistics
+
+Another way to measure jitter is to use the mean deviation (MD) or mean absolute deviation (MAD)
+from the mean delay. This is calculated by subtracting the mean delay from each packet delay,
+taking the absolute value of the result, and then calculating the average of those values.
+The MD or MAD represents the average deviation from the mean delay, regardless of whether the
+deviation is positive or negative. The MD or MAD is a measure of the average jitter.
+*/
+func genJitterLatency(ring *ring.Ring, meandelay time.Duration) time.Duration {
+	var Jitter time.Duration
+	var absRtts []time.Duration
+
+	ringSize := ring.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := ring.Value.(type) {
+		case ping:
+			if ring.Value.(ping).replyReceived {
+				absRtts = append(absRtts, v.rtts-meandelay)
+			}
+		case int:
+			fmt.Println(v)
+		default:
+		}
+		ring = ring.Next()
+	}
+
+	// Calculate the average of the absolute values of the differences
+	for _, v := range absRtts {
+		Jitter = Jitter + v
+	}
+	Jitter = Jitter / time.Duration(len(absRtts))
+
+	return Jitter
 }
