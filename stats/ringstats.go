@@ -388,7 +388,8 @@ func genMinLatency(ring *ring.Ring) time.Duration {
 		switch v := ring.Value.(type) {
 		case ping:
 			if ring.Value.(ping).replyReceived {
-				if v.rtts < minLatency {
+				// Set the first value as the min latency
+				if v.rtts < minLatency || minLatency == 0 {
 					minLatency = v.rtts
 				}
 			}
