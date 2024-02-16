@@ -42,13 +42,17 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "100 Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Latency", float64(stats.RingHosts[host].Ips[index].Avg1000LatencyNs.Nanoseconds()))
 
-				writeInflux("longping", hn, ip, "15 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max15LatencyNs.Nanoseconds()))
-				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max100LatencyNs.Nanoseconds()))
-				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Max1000LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "15 Packet Max Latency", float64(stats.RingHosts[host].Ips[index].Max15LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "100 Packet Max Latency", float64(stats.RingHosts[host].Ips[index].Max100LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "1k Packet Max Latency", float64(stats.RingHosts[host].Ips[index].Max1000LatencyNs.Nanoseconds()))
 
-				writeInflux("longping", hn, ip, "15 Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter15LatencyNs.Nanoseconds()))
-				writeInflux("longping", hn, ip, "100 Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
-				writeInflux("longping", hn, ip, "1k Packet Latency", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "15 Packet Min Latency", float64(stats.RingHosts[host].Ips[index].Min15LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "100 Packet Min Latency", float64(stats.RingHosts[host].Ips[index].Min100LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "1k Packet Min Latency", float64(stats.RingHosts[host].Ips[index].Min1000LatencyNs.Nanoseconds()))
+
+				writeInflux("longping", hn, ip, "15 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter15LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
+				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
 				stats.RingHosts[host].Ips[index].Mu.Unlock()
 			}
 		}

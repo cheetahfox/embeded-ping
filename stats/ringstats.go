@@ -38,6 +38,9 @@ type ipRings struct {
 	Max1000LatencyNs    time.Duration
 	Max100LatencyNs     time.Duration
 	Max15LatencyNs      time.Duration
+	Min1000LatencyNs    time.Duration
+	Min100LatencyNs     time.Duration
+	Min15LatencyNs      time.Duration
 	Jitter1000LatencyNs time.Duration
 	Jitter100LatencyNs  time.Duration
 	Jitter15LatencyNs   time.Duration
@@ -203,6 +206,10 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Max15LatencyNs = genMaxLatency(pIp.Stats15)
 	pIp.Max100LatencyNs = genMaxLatency(pIp.Stats100)
 	pIp.Max1000LatencyNs = genMaxLatency(pIp.Stats1k)
+
+	pIp.Min15LatencyNs = genMinLatency(pIp.Stats15)
+	pIp.Min100LatencyNs = genMinLatency(pIp.Stats100)
+	pIp.Min1000LatencyNs = genMinLatency(pIp.Stats1k)
 }
 
 /*
