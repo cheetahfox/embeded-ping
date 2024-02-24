@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cheetahfox/embeded-ping/config"
+
 	probing "github.com/prometheus-community/pro-bing"
 )
 
@@ -239,7 +240,10 @@ func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, err
 		droppedPackets := s.PacketsSent - s.PacketsRecv
 		for x := 0; x < droppedPackets; x++ {
 			var p ping
-			// We are taking the number of packets we got and adding the dropped packets at the end of the window
+			/*
+				We are taking the number of packets we got and adding the dropped packets at the end of the window
+				Also adding the probe timeout to the sent time for each dropped packet.
+			*/
 			p.sent = startTime.Add(time.Duration(len(s.Rtts)+x) * time.Second)
 			p.replyReceived = false
 			packets = append(packets, p)
@@ -255,9 +259,11 @@ Or into slots older than the transmit time + ring size (100/1000 seconds).
 */
 func ringAddStats(packet ping, stats *ring.Ring) error {
 	ringSize := stats.Len()
-	expireLen := ringSize - 1
-	// Set an expiration time of for 101 or 1001 seconds Before the packet was sent.
-	expireTime := packet.sent.Add(time.Duration(-expireLen) * time.Second)
+
+	// Find the oldest packet in the ring and check if we have open slots in the ring
+	oldest := ringOldestPacket(stats)
+	openSlots := ringOpenSlots(stats)
+
 	var inserted bool
 
 	// yes, we are going all the way around the ring + one element.
@@ -265,7 +271,8 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 		// Checking that we have a ping packet in the ring
 		switch v := stats.Value.(type) {
 		case ping:
-			if stats.Value.(ping).sent.Before(expireTime) {
+			// If we do not have open slots and the packet is the oldest packet in the ring then we replace it
+			if !openSlots && stats.Value.(ping).sent == oldest.sent {
 				stats.Value = packet
 				inserted = true
 			}
@@ -289,7 +296,6 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 		We should never get here but if we do we need to know about it. So here is some debug info.
 	*/
 	if !inserted {
-		fmt.Println("Expire time      : " + expireTime.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		fmt.Println("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		fmt.Println("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		err := errors.New("unable to insert into ring")
@@ -297,6 +303,47 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 	}
 
 	return nil
+}
+
+/*
+Find the oldest packet in the ring and return it.
+*/
+func ringOldestPacket(stats *ring.Ring) ping {
+	var oldest ping
+	ringSize := stats.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := stats.Value.(type) {
+		case ping:
+			if stats.Value.(ping).sent.Before(oldest.sent) || oldest.sent.IsZero() {
+				oldest = stats.Value.(ping)
+			}
+		case int:
+			fmt.Println(v)
+		default:
+		}
+		stats = stats.Next()
+	}
+
+	return oldest
+}
+
+/*
+Find if we have open slots in the ring
+*/
+func ringOpenSlots(stats *ring.Ring) bool {
+	ringSize := stats.Len()
+	for i := 0; i < ringSize; i++ {
+		switch v := stats.Value.(type) {
+		case ping:
+		case int:
+			fmt.Println(v)
+		default:
+			return true
+		}
+		stats = stats.Next()
+	}
+
+	return false
 }
 
 /*
@@ -349,8 +396,14 @@ func genAvgLatency(ring *ring.Ring) time.Duration {
 		ring = ring.Next()
 	}
 
-	// time.Duration is really a int64 of NanoSeconds so we can do this math here
-	avg := int64(totalTime) / int64(ringSize-emptyPackets)
+	/*
+		time.Duration is really a int64 of NanoSeconds so we can do this math here
+		Need to make sure we don't divide by zero in the case we have 100% packet loss
+	*/
+	var avg int64
+	if int64(ringSize-emptyPackets) != 0 {
+		avg = int64(totalTime) / int64(ringSize-emptyPackets)
+	}
 	return time.Duration(avg)
 }
 
@@ -430,11 +483,32 @@ func genJitterLatency(ring *ring.Ring, meandelay time.Duration) time.Duration {
 		ring = ring.Next()
 	}
 
+	/*
+		if config.Config.Debug {
+			fmt.Println("absRtts Len: ", len(absRtts))
+		}
+	*/
+
 	// Calculate the average of the absolute values of the differences
 	for _, v := range absRtts {
 		Jitter = Jitter + v
 	}
-	Jitter = Jitter / time.Duration(len(absRtts))
 
-	return Jitter
+	if config.Config.Debug {
+		fmt.Println("Jitter before calc: ", Jitter)
+	}
+
+	var calculaterJitter int64
+
+	if len(absRtts) != 0 {
+		calculaterJitter = int64(Jitter) / int64(len(absRtts))
+	} else if config.Config.Debug {
+		fmt.Println("No packets to calculate Jitter")
+	}
+
+	if config.Config.Debug {
+		fmt.Println("Ring Size ", ring.Len())
+	}
+
+	return time.Duration(calculaterJitter)
 }

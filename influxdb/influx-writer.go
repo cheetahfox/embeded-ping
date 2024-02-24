@@ -29,7 +29,6 @@ func WriteRingMetrics(frequency int) {
 				hn := stats.RingHosts[host].Hostname
 				ip := stats.RingHosts[host].Ips[index].Ip
 
-				stats.RingHosts[host].Ips[index].Mu.Lock()
 				writeInflux("longping", hn, ip, "Total Packets Sent", float64(stats.RingHosts[host].Ips[index].TotalSent))
 				writeInflux("longping", hn, ip, "Total Packets Revc", float64(stats.RingHosts[host].Ips[index].TotalReceived))
 				writeInflux("longping", hn, ip, "Total Packets Loss", float64(stats.RingHosts[host].Ips[index].TotalLoss))
@@ -53,7 +52,6 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "15 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter15LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
-				stats.RingHosts[host].Ips[index].Mu.Unlock()
 			}
 		}
 	}
