@@ -458,19 +458,14 @@ func genMinLatency(ring *ring.Ring) time.Duration {
 }
 
 /*
-Return the standard deviation of the latency from the long term statistics
-
-Another way to measure jitter is to use the mean deviation (MD) or mean absolute deviation (MAD)
-from the mean delay. This is calculated by subtracting the mean delay from each packet delay,
-taking the absolute value of the result, and then calculating the average of those values.
-The MD or MAD represents the average deviation from the mean delay, regardless of whether the
-deviation is positive or negative. The MD or MAD is a measure of the average jitter.
+Return the jitter latency from the long term statistics
 */
 func genJitterLatency(ring *ring.Ring) time.Duration {
 	var Jitter int64
 	var absRtts []time.Duration
 	var diffRtts []time.Duration
 
+	// First we get all of the rtts that have a reply
 	ringSize := ring.Len()
 	for i := 0; i < ringSize; i++ {
 		switch v := ring.Value.(type) {
@@ -485,12 +480,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 		ring = ring.Next()
 	}
 
-	/*
-		if config.Config.Debug {
-			fmt.Println("absRtts Len: ", len(absRtts))
-		}
-	*/
-
+	// Then we calculate the differences between the rtts
 	for i := 0; i < len(absRtts); i++ {
 		if i != 0 {
 			diffRtts = append(diffRtts, absRtts[i]-absRtts[i-1])
