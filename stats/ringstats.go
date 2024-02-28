@@ -10,6 +10,7 @@ import (
 	"container/ring"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -200,9 +201,9 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Avg100LatencyNs = genAvgLatency(pIp.Stats100)
 	pIp.Avg1000LatencyNs = genAvgLatency(pIp.Stats1k)
 
-	pIp.Jitter15LatencyNs = genJitterLatency(pIp.Stats15, pIp.Avg15LatencyNs)
-	pIp.Jitter100LatencyNs = genJitterLatency(pIp.Stats100, pIp.Avg100LatencyNs)
-	pIp.Jitter1000LatencyNs = genJitterLatency(pIp.Stats1k, pIp.Avg1000LatencyNs)
+	pIp.Jitter15LatencyNs = genJitterLatency(pIp.Stats15)
+	pIp.Jitter100LatencyNs = genJitterLatency(pIp.Stats100)
+	pIp.Jitter1000LatencyNs = genJitterLatency(pIp.Stats1k)
 
 	pIp.Max15LatencyNs = genMaxLatency(pIp.Stats15)
 	pIp.Max100LatencyNs = genMaxLatency(pIp.Stats100)
@@ -465,16 +466,17 @@ taking the absolute value of the result, and then calculating the average of tho
 The MD or MAD represents the average deviation from the mean delay, regardless of whether the
 deviation is positive or negative. The MD or MAD is a measure of the average jitter.
 */
-func genJitterLatency(ring *ring.Ring, meandelay time.Duration) time.Duration {
-	var Jitter time.Duration
+func genJitterLatency(ring *ring.Ring) time.Duration {
+	var Jitter int64
 	var absRtts []time.Duration
+	var diffRtts []time.Duration
 
 	ringSize := ring.Len()
 	for i := 0; i < ringSize; i++ {
 		switch v := ring.Value.(type) {
 		case ping:
 			if ring.Value.(ping).replyReceived {
-				absRtts = append(absRtts, v.rtts-meandelay)
+				absRtts = append(absRtts, v.rtts)
 			}
 		case int:
 			fmt.Println(v)
@@ -489,26 +491,30 @@ func genJitterLatency(ring *ring.Ring, meandelay time.Duration) time.Duration {
 		}
 	*/
 
+	for i := 0; i < len(absRtts); i++ {
+		if i != 0 {
+			diffRtts = append(diffRtts, absRtts[i]-absRtts[i-1])
+		}
+	}
+
 	// Calculate the average of the absolute values of the differences
-	for _, v := range absRtts {
-		Jitter = Jitter + v
+	var totalDiff int64
+	for _, v := range diffRtts {
+		totalDiff = totalDiff + absInt(int64(v))
+	}
+
+	if len(diffRtts) != 0 {
+		Jitter = totalDiff / int64(len(diffRtts))
 	}
 
 	if config.Config.Debug {
-		fmt.Println("Jitter before calc: ", Jitter)
+		fmt.Println("Jitter: ", Jitter)
 	}
 
-	var calculaterJitter int64
+	return time.Duration(Jitter)
+}
 
-	if len(absRtts) != 0 {
-		calculaterJitter = int64(Jitter) / int64(len(absRtts))
-	} else if config.Config.Debug {
-		fmt.Println("No packets to calculate Jitter")
-	}
-
-	if config.Config.Debug {
-		fmt.Println("Ring Size ", ring.Len())
-	}
-
-	return time.Duration(calculaterJitter)
+// Return the absolute value of an int64 number
+func absInt(n int64) int64 {
+	return int64(math.Abs(float64(n)))
 }
