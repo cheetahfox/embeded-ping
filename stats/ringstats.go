@@ -129,6 +129,15 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 }
 
 /*
+This function is going to be called by the main loop to make sure we don't have any
+ping packets that should be removed from the ring due to timing out. Normally we don't
+remove packets anywhere else.
+*/
+func ringMaintance(s probing.Statistics, pIp *ipRings, host string, startTime time.Time) {
+
+}
+
+/*
 Func to kick off the pingThreads for the first time. Can be called directly from a future API
 For now only call with 1 packet and 1 second.
 */
@@ -232,7 +241,8 @@ func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, err
 	for i := range s.Rtts {
 		var p ping
 		p.rtts = s.Rtts[i]
-		p.sent = startTime.Add(time.Duration(i) * time.Second)
+		p.sent = startTime
+		p.received = startTime.Add(p.rtts)
 		p.replyReceived = true
 		packets = append(packets, p)
 	}
@@ -245,7 +255,8 @@ func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, err
 				We are taking the number of packets we got and adding the dropped packets at the end of the window
 				Also adding the probe timeout to the sent time for each dropped packet.
 			*/
-			p.sent = startTime.Add(time.Duration(len(s.Rtts)+x) * time.Second)
+			p.sent = startTime
+			p.received = startTime.Add(time.Duration(config.Config.ProbeTimeout) * time.Second)
 			p.replyReceived = false
 			packets = append(packets, p)
 		}
@@ -329,7 +340,7 @@ func ringOldestPacket(stats *ring.Ring) ping {
 }
 
 /*
-Find if we have open slots in the ring
+Find if we have open slots in the ring for pings
 */
 func ringOpenSlots(stats *ring.Ring) bool {
 	ringSize := stats.Len()
@@ -488,6 +499,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 	}
 
 	// Calculate the average of the absolute values of the differences
+	// here we take advantage of the fact that time.duration is really a int64 of NanoSeconds
 	var totalDiff int64
 	for _, v := range diffRtts {
 		totalDiff = totalDiff + absInt(int64(v))
