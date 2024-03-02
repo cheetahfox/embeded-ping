@@ -31,27 +31,6 @@ import (
 	// "github.com/sanity-io/litter"
 )
 
-func printTotals(seconds int) {
-	ticker := time.NewTicker(time.Second * time.Duration(seconds))
-	for range ticker.C {
-		for host := range stats.RingHosts {
-			for index := 0; index < len(stats.RingHosts[host].Ips); index++ {
-				stats.RingHosts[host].Ips[index].Mu.Lock()
-				fmt.Println("For host: " + host + " @---> " + stats.RingHosts[host].Ips[index].Ip.String())
-				fmt.Printf("Total Packets send : %d \n", stats.RingHosts[host].Ips[index].TotalSent)
-				fmt.Printf("Total Packets recv : %d \n", stats.RingHosts[host].Ips[index].TotalReceived)
-				fmt.Printf("Total Packets loss : %d \n", stats.RingHosts[host].Ips[index].TotalLoss)
-				fmt.Printf("100 Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss100)
-				fmt.Printf("1k Packets loss : %f \n", stats.RingHosts[host].Ips[index].Packetloss1000)
-				fmt.Println("---")
-				fmt.Println("100 Packet Latency : " + stats.RingHosts[host].Ips[index].Avg100LatencyNs.String())
-				fmt.Println("1k Packet Latency  : " + stats.RingHosts[host].Ips[index].Avg1000LatencyNs.String())
-				stats.RingHosts[host].Ips[index].Mu.Unlock()
-			}
-		}
-	}
-}
-
 func main() {
 	fmt.Println("Startup")
 	err := config.Startup()
