@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/cheetahfox/Iot-local-midware v0.1.2
-	github.com/gofiber/fiber/v2 v2.52.1
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
 	github.com/labstack/gommon v0.3.0
 )
