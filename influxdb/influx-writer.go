@@ -23,11 +23,15 @@ func NewInfluxConnection(config config.InfluxConfiguration) {
 // This function will write the metrics to InfluxDB every X seconds
 func WriteRingMetrics(frequency int) {
 	ticker := time.NewTicker(time.Second * time.Duration(frequency))
+	var start time.Time
 	for range ticker.C {
 		for host := range stats.RingHosts {
 			for index := 0; index < len(stats.RingHosts[host].Ips); index++ {
 				hn := stats.RingHosts[host].Hostname
 				ip := stats.RingHosts[host].Ips[index].Ip
+				if config.Config.Debug {
+					start = time.Now()
+				}
 
 				writeInflux("longping", hn, ip, "Total Packets Sent", float64(stats.RingHosts[host].Ips[index].TotalSent))
 				writeInflux("longping", hn, ip, "Total Packets Revc", float64(stats.RingHosts[host].Ips[index].TotalReceived))
@@ -52,6 +56,11 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "15 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter15LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
+
+				if config.Config.Debug {
+					elapsed := time.Since(start)
+					fmt.Println("Time to write to InfluxDB: " + elapsed.String())
+				}
 			}
 		}
 	}

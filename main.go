@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,15 +28,17 @@ import (
 	"github.com/cheetahfox/embeded-ping/config"
 	"github.com/cheetahfox/embeded-ping/influxdb"
 	"github.com/cheetahfox/embeded-ping/stats"
-	"github.com/labstack/gommon/log"
 	// "github.com/sanity-io/litter"
 )
 
 func main() {
-	fmt.Println("Startup")
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	logger.Info("Startup")
 	err := config.Startup()
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Error in config.Startup", err)
+		panic(err)
 	}
 
 	hosts := config.GetHosts()
