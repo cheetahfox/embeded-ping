@@ -54,6 +54,12 @@ func main() {
 	// Always start the prometheus metrics and health checks
 	longping := fiber.New(config.Config.FiberConfig)
 
+	prometheus := fiberprometheus.New("longping")
+	prometheus.RegisterAt(longping, "/metrics")
+	longping.Get("/healthz", health.GetHealthz)
+	longping.Get("/readyz", health.GetReadyz)
+	longping.Use(prometheus.Middleware)
+
 	// Start Fiber app in a separate goroutine
 	go func() {
 		if err := longping.Listen(":3000"); err != nil {
@@ -61,11 +67,6 @@ func main() {
 			panic(err)
 		}
 	}()
-
-	prometheus := fiberprometheus.New("longping")
-	prometheus.RegisterAt(longping, "/metrics")
-	longping.Get("/healthz", health.GetHealthz)
-	longping.Get("/readyz", health.GetReadyz)
 
 	// Make influxdb optional
 	if config.Config.InfluxEnabled {
