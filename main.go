@@ -25,9 +25,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/embeded-ping/health"
 	"github.com/cheetahfox/embeded-ping/influxdb"
 	"github.com/cheetahfox/embeded-ping/stats"
+	"github.com/gofiber/fiber/v2"
 	// "github.com/sanity-io/litter"
 )
 
@@ -48,14 +51,32 @@ func main() {
 		stats.RegisterRingHost(host)
 	}
 
-	influx := config.InfluxEnvStartup()
-	influxdb.NewInfluxConnection(influx)
+	// Always start the prometheus metrics and health checks
+	longping := fiber.New(config.Config.FiberConfig)
 
-	// go printTotals(30)
-	// What a hack for now... we need to wait for the influxdb to connect before we can start sending data.
-	time.Sleep(time.Duration(time.Second * 1))
+	// Start Fiber app in a separate goroutine
+	go func() {
+		if err := longping.Listen(":3000"); err != nil {
+			logger.Error("Error starting Fiber app: %v", err)
+			panic(err)
+		}
+	}()
+
+	prometheus := fiberprometheus.New("longping")
+	prometheus.RegisterAt(longping, "/metrics")
+	longping.Get("/healthz", health.GetHealthz)
+	longping.Get("/readyz", health.GetReadyz)
+
+	// Make influxdb optional
+	if config.Config.InfluxEnabled {
+		influx := config.InfluxEnvStartup()
+		influxdb.NewInfluxConnection(influx)
+		// need to wait for the influxdb to connect before we can start sending data.
+		time.Sleep(time.Duration(time.Second * 1))
+		influxdb.WriteRingMetrics(15)
+	}
+
 	fmt.Println("Startup sleeping")
-	influxdb.WriteRingMetrics(15)
 
 	// Listen for Sigint or SigTerm and exit if you get them.
 	sigs := make(chan os.Signal, 1)
@@ -72,5 +93,7 @@ func main() {
 
 	<-done
 	fmt.Println("Shutting down...")
-	influxdb.DisconnectInflux()
+	if config.Config.InfluxEnabled {
+		influxdb.DisconnectInflux()
+	}
 }

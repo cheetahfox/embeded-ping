@@ -13,6 +13,7 @@ import (
 type Configuration struct {
 	FiberConfig   fiber.Config
 	Debug         bool
+	InfluxEnabled bool
 	ProbeInterval int
 	ProbeTimeout  int
 }
@@ -42,6 +43,10 @@ func Startup() error {
 
 	if os.Getenv("DEBUG") == "true" {
 		Config.Debug = true
+	}
+
+	if os.Getenv("INFLUX_ENABLED") == "true" {
+		Config.InfluxEnabled = true
 	}
 
 	// Set the Probe Interval
