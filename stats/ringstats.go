@@ -226,7 +226,7 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 /*
 Take a probing.Statistics and return an slice of pings.
 If there are no pings in the out we still create blank packets
-Also we don't a super accurate sent time so we are just going add 1000ms to the start
+Also we don't have a super accurate sent time so we are just going add 1000ms to the start
 for every additional packet in s. Luckly since the plan is to run only 1 packet pings
 the startTime should be very close to the true sent. But this might be an issue if we
 many packets in a s stats.
