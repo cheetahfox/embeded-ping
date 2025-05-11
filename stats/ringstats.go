@@ -59,7 +59,7 @@ var RingHosts map[string]*RingStats
 /*
 Add a new Ring Host for monitoring; we don't lock it since we aren't messing with the ring
 We do DNS resolution and for each IP address we find we are going to init a stats ring for
-our default packet windows for the last 15, 100 and 1k packets.
+our default packet windows for he last 15, 100 and 1k packets.
 */
 func RegisterRingHost(host string) error {
 
