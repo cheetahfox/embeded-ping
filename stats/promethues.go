@@ -18,10 +18,12 @@ var (
 		Help: "Total number of API requests",
 	}, []string{"method", "endpoint", "status"})
 
-	TotalPingsSent = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "total_pings_sent",
-		Help: "Total number of pings sent",
-	}, []string{"method", "endpoint", "status"})
+	/*
+		TotalPingsSent = promauto.NewCounterVec(prometheus.CounterOpts{
+			Name: "total_pings_sent",
+			Help: "Total number of pings sent",
+		}, []string{"method", "endpoint", "status"})
+	*/
 
 	// Host metrics
 	TotalSent = promauto.NewGaugeVec(
@@ -163,37 +165,37 @@ var (
 func prometheusUpdateMetrics(hostname string, pIp *ipRings) {
 	// Update the metrics with the values from the ipRings struct
 	if config.Config.Debug {
-		sd, err := TotalSent.GetMetricWith(prometheus.Labels{"hostname": hostname})
+		sd, err := TotalSent.GetMetricWith(prometheus.Labels{"hostname": hostname, "ip_address": pIp.Ip.String()})
 		if err != nil {
 			fmt.Println("Error getting TotalSent metric:", err)
 		}
 		fmt.Printf("Total-Sent pings for %s\n", hostname)
 		spew.Dump(sd)
 	}
-	TotalSent.WithLabelValues(hostname).Set(float64(pIp.TotalSent))
-	TotalReceived.WithLabelValues(hostname).Set(float64(pIp.TotalReceived))
-	TotalLoss.WithLabelValues(hostname).Set(float64(pIp.TotalLoss))
-	TotalDuplicates.WithLabelValues(hostname).Set(float64(pIp.TotalDuplicates))
+	TotalSent.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalSent))
+	TotalReceived.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalReceived))
+	TotalLoss.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalLoss))
+	TotalDuplicates.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalDuplicates))
 	// 1000 packet ring
-	Avg1000LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Avg1000LatencyNs))
-	Jitter1000Ns.WithLabelValues(hostname).Set(float64(pIp.Jitter1000LatencyNs))
-	Max1000LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Max1000LatencyNs))
-	Min1000LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Min1000LatencyNs))
-	Packetloss1000.WithLabelValues(hostname).Set(float64(pIp.Packetloss1000))
+	Avg1000LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Avg1000LatencyNs))
+	Jitter1000Ns.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Jitter1000LatencyNs))
+	Max1000LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Max1000LatencyNs))
+	Min1000LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Min1000LatencyNs))
+	Packetloss1000.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Packetloss1000))
 	// 100 packet ring
-	Avg100LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Avg100LatencyNs))
-	Jitter100Ns.WithLabelValues(hostname).Set(float64(pIp.Jitter100LatencyNs))
-	Max100LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Max100LatencyNs))
-	Min100LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Min100LatencyNs))
-	Packetloss100.WithLabelValues(hostname).Set(float64(pIp.Packetloss100))
+	Avg100LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Avg100LatencyNs))
+	Jitter100Ns.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Jitter100LatencyNs))
+	Max100LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Max100LatencyNs))
+	Min100LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Min100LatencyNs))
+	Packetloss100.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Packetloss100))
 	// 15 packet ring
-	Avg15LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Avg15LatencyNs))
-	Jitter15Ns.WithLabelValues(hostname).Set(float64(pIp.Jitter15LatencyNs))
-	Max15LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Max15LatencyNs))
-	Min15LatencyNs.WithLabelValues(hostname).Set(float64(pIp.Min15LatencyNs))
-	Packetloss15.WithLabelValues(hostname).Set(float64(pIp.Packetloss15))
+	Avg15LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Avg15LatencyNs))
+	Jitter15Ns.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Jitter15LatencyNs))
+	Max15LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Max15LatencyNs))
+	Min15LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Min15LatencyNs))
+	Packetloss15.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Packetloss15))
 
-	TotalPingsSent.WithLabelValues(hostname, pIp.Ip.String()).Inc()
+	//TotalPingsSent.WithLabelValues(hostname, pIp.Ip.String()).Inc()
 
 	if config.Config.Debug {
 		fmt.Printf("Updated Prometheus metrics for %s\n", hostname)
