@@ -83,10 +83,14 @@ func RegisterRingHost(host string) error {
 		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the ring.
 		RingHosts[host].Ips = append(RingHosts[host].Ips, newRing)
 
-		fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
+		if config.Config.Debug {
+			fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
+		}
 	}
 
-	fmt.Println("---- Done adding ----")
+	if config.Config.Debug {
+		fmt.Println("---- Done adding ----")
+	}
 
 	ringCollector(host, 1, 1)
 
@@ -124,7 +128,6 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 
 		stats := pinger.Statistics()
 
-		// TotalPingsSent.Inc()
 		ringParseStats(*stats, pIp, host, startTime)
 	}
 }
@@ -223,7 +226,7 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Min100LatencyNs = genMinLatency(pIp.Stats100)
 	pIp.Min1000LatencyNs = genMinLatency(pIp.Stats1k)
 
-	// Update the prometheus metrics
+	// Update the general prometheus metrics
 	prometheusUpdateMetrics(hostname, pIp)
 }
 
