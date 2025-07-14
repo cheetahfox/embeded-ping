@@ -124,6 +124,7 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 
 		stats := pinger.Statistics()
 
+		// TotalPingsSent.Inc()
 		ringParseStats(*stats, pIp, host, startTime)
 	}
 }
@@ -221,6 +222,9 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Min15LatencyNs = genMinLatency(pIp.Stats15)
 	pIp.Min100LatencyNs = genMinLatency(pIp.Stats100)
 	pIp.Min1000LatencyNs = genMinLatency(pIp.Stats1k)
+
+	// Update the prometheus metrics
+	prometheusUpdateMetrics(hostname, pIp)
 }
 
 /*

@@ -27,8 +27,8 @@ import (
 
 	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/cheetahfox/embeded-ping/config"
-	"github.com/cheetahfox/embeded-ping/health"
 	"github.com/cheetahfox/embeded-ping/influxdb"
+	"github.com/cheetahfox/embeded-ping/router"
 	"github.com/cheetahfox/embeded-ping/stats"
 	"github.com/gofiber/fiber/v2"
 	// "github.com/sanity-io/litter"
@@ -55,10 +55,9 @@ func main() {
 	longping := fiber.New(config.Config.FiberConfig)
 
 	prometheus := fiberprometheus.New("longping")
-	prometheus.RegisterAt(longping, "/metrics")
-	longping.Get("/healthz", health.GetHealthz)
-	longping.Get("/readyz", health.GetReadyz)
 	longping.Use(prometheus.Middleware)
+
+	router.SetupRoutes(longping)
 
 	// Start Fiber app in a separate goroutine
 	go func() {
