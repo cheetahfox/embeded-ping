@@ -1,7 +1,5 @@
-# Embeded Ping
+# Long Ping 
 
-This little program is going to ping a list of hosts once a second and then store each entry 
-as data point in an influxdb database. 
-
-It was going to be small... But I want to use this under Kubernetes also... So it needs health 
-checks and 
+Long Ping is a network observability tool that allows for high precision monitoring of long term network performance 
+without requiring sending large number of packets for each sample. Long Ping does this by sending only 1 ping packet 
+per second but keeping a rolling window of the last 15, 100 and 1000 packets to then calculate. 

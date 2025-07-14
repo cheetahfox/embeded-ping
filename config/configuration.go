@@ -36,8 +36,8 @@ func Startup() error {
 	Config.FiberConfig = fiber.Config{
 		CaseSensitive: true,
 		StrictRouting: true,
-		ServerHeader:  "Emb-Ping",
-		AppName:       "Embeded Ping v1.0.1",
+		ServerHeader:  "Long-Ping",
+		AppName:       "Long Ping v1.1.0",
 		ReadTimeout:   (30 * time.Second),
 	}
 
