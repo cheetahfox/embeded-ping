@@ -2,11 +2,14 @@ package stats
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cheetahfox/embeded-ping/config"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	probing "github.com/prometheus-community/pro-bing"
 )
 
 // Register all of the metrics for Prometheus
@@ -159,7 +162,28 @@ var (
 		},
 		[]string{"hostname", "ip_address"},
 	)
+	PingLatencyNs = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:                            "ping_latency_ns",
+		Help:                            "Histogram of ping latency in nanoseconds",
+		NativeHistogramBucketFactor:     1.1,
+		NativeHistogramMaxBucketNumber:  100,
+		NativeHistogramMinResetDuration: 1 * time.Hour,
+	}, []string{"hostname", "ip_address"},
+	)
 )
+
+// updatedHistogramMetrics updates the histogram metrics with the latest ping latency
+func updatedHistogramMetrics(hostname string, s probing.Statistics) {
+	// Update the histogram with the latest ping latency
+	if config.Config.Debug {
+		fmt.Printf("Updating histogram for %s with latency %d ns\n", hostname, s.Addr)
+	}
+
+	// loop through the RTTs this covers cases where there are multiple RTTs
+	for _, rtts := range s.Rtts {
+		PingLatencyNs.WithLabelValues(hostname, s.Addr).Observe(float64(rtts.Nanoseconds()))
+	}
+}
 
 // I hate how this is just a big list of metrics that need to be updated
 func prometheusUpdateMetrics(hostname string, pIp *ipRings) {

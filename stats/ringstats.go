@@ -226,8 +226,9 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Min100LatencyNs = genMinLatency(pIp.Stats100)
 	pIp.Min1000LatencyNs = genMinLatency(pIp.Stats1k)
 
-	// Update the general prometheus metrics
+	// Update the prometheus metrics
 	prometheusUpdateMetrics(hostname, pIp)
+	updatedHistogramMetrics(hostname, s)
 }
 
 /*
