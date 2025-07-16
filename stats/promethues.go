@@ -21,13 +21,6 @@ var (
 		Help: "Total number of API requests",
 	}, []string{"method", "endpoint", "status"})
 
-	/*
-		TotalPingsSent = promauto.NewCounterVec(prometheus.CounterOpts{
-			Name: "total_pings_sent",
-			Help: "Total number of pings sent",
-		}, []string{"method", "endpoint", "status"})
-	*/
-
 	// Host metrics
 	TotalSent = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
