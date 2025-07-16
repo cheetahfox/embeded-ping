@@ -11,7 +11,7 @@ WORKDIR /go/src/github.com/cheetahfox/embeded-ping
 
 RUN go build
 
-FROM alpine:3.20.2
+FROM alpine:3.22.1
 
 RUN apk add --no-cache ca-certificates 
 
