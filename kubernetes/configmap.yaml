@@ -4,6 +4,6 @@ metadata:
   name: longping-config
   namespace: apps
 data:
-  HOSTS: "173.174.128.1 8.8.8.8 35.208.63.93 github.com"
+  HOSTS: "8.8.8.8 github.com"
   INFLUX_ENABLED: "false"
   DEBUG: "false"
