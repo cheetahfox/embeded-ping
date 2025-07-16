@@ -5,8 +5,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/cheetahfox/embeded-ping/config"
-	"github.com/cheetahfox/embeded-ping/stats"
+	"github.com/cheetahfox/longping/config"
+	"github.com/cheetahfox/longping/stats"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 

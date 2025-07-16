@@ -5,9 +5,9 @@ RUN apk add --no-cache --virtual .build-deps gcc musl-dev openssl git
 ENV GO111MODULE=on
 RUN mkdir /go/src/github.com
 RUN mkdir /go/src/github.com/cheetahfox
-COPY ./ /go/src/github.com/cheetahfox/embeded-ping
+COPY ./ /go/src/github.com/cheetahfox/longping
 
-WORKDIR /go/src/github.com/cheetahfox/embeded-ping
+WORKDIR /go/src/github.com/cheetahfox/longping
 
 RUN go build
 
@@ -15,10 +15,10 @@ FROM alpine:3.22.1
 
 RUN apk add --no-cache ca-certificates 
 
-COPY --from=builder /go/src/github.com/cheetahfox/embeded-ping/embeded-ping /embeded-ping
+COPY --from=builder /go/src/github.com/cheetahfox/longping/longping /longping
 
-RUN chmod +x /embeded-ping
-CMD /embeded-ping
+RUN chmod +x /longping
+CMD /longping
 EXPOSE 3000
 
 

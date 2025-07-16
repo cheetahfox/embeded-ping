@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/ansrivas/fiberprometheus/v2"
-	"github.com/cheetahfox/embeded-ping/config"
-	"github.com/cheetahfox/embeded-ping/influxdb"
-	"github.com/cheetahfox/embeded-ping/router"
-	"github.com/cheetahfox/embeded-ping/stats"
+	"github.com/cheetahfox/longping/config"
+	"github.com/cheetahfox/longping/influxdb"
+	"github.com/cheetahfox/longping/router"
+	"github.com/cheetahfox/longping/stats"
 	"github.com/gofiber/fiber/v2"
 	// "github.com/sanity-io/litter"
 )

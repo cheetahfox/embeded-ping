@@ -1,4 +1,4 @@
-module github.com/cheetahfox/embeded-ping
+module github.com/cheetahfox/longping
 
 go 1.22
 

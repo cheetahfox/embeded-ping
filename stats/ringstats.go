@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/longping/config"
 
 	probing "github.com/prometheus-community/pro-bing"
 )

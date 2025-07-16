@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/longping/config"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

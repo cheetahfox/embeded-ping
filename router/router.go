@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/cheetahfox/embeded-ping/health"
+	"github.com/cheetahfox/longping/health"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"

@@ -1,7 +1,7 @@
 package health
 
 import (
-	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/longping/config"
 	"github.com/gofiber/fiber/v2"
 )
 
