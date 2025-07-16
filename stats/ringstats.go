@@ -70,6 +70,7 @@ func RegisterRingHost(host string) error {
 
 	ips, err := net.LookupIP(host)
 	if err != nil {
+		delete(RingHosts, host) // If we can't resolve the host, remove it from the map
 		return err
 	}
 
