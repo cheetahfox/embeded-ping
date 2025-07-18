@@ -36,11 +36,12 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	logger.Info("Startup")
+	slog.Info("Startup")
 	err := config.Startup()
 	if err != nil {
-		logger.Error("Error in config.Startup", err)
+		slog.Error("Error in config.Startup:" + err.Error())
 		panic(err)
 	}
 
@@ -62,7 +63,7 @@ func main() {
 	// Start Fiber app in a separate goroutine
 	go func() {
 		if err := longping.Listen(":3000"); err != nil {
-			logger.Error("Error starting Fiber app: %v", err)
+			slog.Error("Error starting Fiber app:" + err.Error())
 			panic(err)
 		}
 	}()
@@ -76,7 +77,7 @@ func main() {
 		influxdb.WriteRingMetrics(15)
 	}
 
-	fmt.Println("Startup sleeping")
+	slog.Debug("Startup successful: waiting for shutdown signal")
 
 	// Listen for Sigint or SigTerm and exit if you get them.
 	sigs := make(chan os.Signal, 1)
@@ -86,8 +87,7 @@ func main() {
 
 	go func() {
 		sig := <-sigs
-		fmt.Println()
-		fmt.Println(sig)
+		slog.Debug("Received shutdown signal:" + sig.String())
 		done <- true
 	}()
 

@@ -9,9 +9,11 @@ package stats
 import (
 	"container/ring"
 	"errors"
-	"fmt"
+	"log/slog"
 	"math"
 	"net"
+	"strconv"
+
 	"sync"
 	"time"
 
@@ -83,18 +85,11 @@ func RegisterRingHost(host string) error {
 
 		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the ring.
 		RingHosts[host].Ips = append(RingHosts[host].Ips, newRing)
-
-		if config.Config.Debug {
-			fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
-		}
+		slog.Debug("Registered Hostname: " + host + " With Ip Address: " + ip.String())
 	}
 
-	if config.Config.Debug {
-		fmt.Println("---- Done adding ----")
-	}
-
+	slog.Debug(" Done adding host: " + host)
 	ringCollector(host, 1, 1)
-
 	return nil
 }
 
@@ -109,21 +104,21 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 		// Check for incoming shutdown and return if we get one.
 		select {
 		case <-pIp.shutdown:
-			fmt.Println("thread shutdown for : " + host + " ---> " + pIp.Ip.String())
+			slog.Info("thread shutdown for : " + host + " ---> " + pIp.Ip.String())
 			return
 		default:
 		}
 		startTime := time.Now()
 		pinger, err := probing.NewPinger(pIp.Ip.String())
 		if err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			return
 		}
 		pinger.Count = packets
 		pinger.Timeout = time.Second * time.Duration(config.Config.ProbeTimeout)
 		err = pinger.Run() // Blocks until finished.
 		if err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			return
 		}
 
@@ -177,7 +172,7 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	// Generate arrays of ping packets for storage long term
 	pingPackets, err := generatePingPackets(s, startTime)
 	if err != nil {
-		fmt.Println("unable to generate ping packets")
+		slog.Warn("unable to generate ping packets")
 	}
 
 	pIp.Mu.Lock()
@@ -192,18 +187,18 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	for _, ping := range pingPackets {
 		err := ringAddStats(ping, pIp.Stats100)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " --->  100 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " --->  100 ring")
 		}
 		err = ringAddStats(ping, pIp.Stats1k)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " ---> 1000 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " ---> 1000 ring")
 		}
 		err = ringAddStats(ping, pIp.Stats15)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " ---> 15 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " ---> 15 ring")
 		}
 	}
 
@@ -298,7 +293,7 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 				inserted = true
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		// blank value so we can insert.
 		default:
 			stats.Value = packet
@@ -317,8 +312,8 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 		We should never get here but if we do we need to know about it. So here is some debug info.
 	*/
 	if !inserted {
-		fmt.Println("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
-		fmt.Println("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		slog.Warn("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		slog.Warn("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		err := errors.New("unable to insert into ring")
 		return err
 	}
@@ -339,7 +334,7 @@ func ringOldestPacket(stats *ring.Ring) ping {
 				oldest = stats.Value.(ping)
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		stats = stats.Next()
@@ -357,7 +352,7 @@ func ringOpenSlots(stats *ring.Ring) bool {
 		switch v := stats.Value.(type) {
 		case ping:
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 			return true
 		}
@@ -381,13 +376,12 @@ func genPacketloss(ring *ring.Ring) float64 {
 				droppedPackets++
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
 	}
 
-	//fmt.Printf("Found dropped packets = %d\n", droppedPackets)
 	packetLoss = float64(droppedPackets) / float64(ringSize)
 
 	return packetLoss
@@ -410,7 +404,7 @@ func genAvgLatency(ring *ring.Ring) time.Duration {
 				emptyPackets++
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 			emptyPackets++
 		}
@@ -443,7 +437,7 @@ func genMaxLatency(ring *ring.Ring) time.Duration {
 				}
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -468,7 +462,7 @@ func genMinLatency(ring *ring.Ring) time.Duration {
 				}
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -494,7 +488,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 				absRtts = append(absRtts, v.rtts)
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -518,10 +512,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 		Jitter = totalDiff / int64(len(diffRtts))
 	}
 
-	if config.Config.Debug {
-		fmt.Println("Jitter: ", Jitter)
-	}
-
+	slog.Debug("Jitter: ", Jitter)
 	return time.Duration(Jitter)
 }
 

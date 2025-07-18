@@ -1,11 +1,9 @@
 package stats
 
 import (
-	"fmt"
+	"log/slog"
 	"time"
 
-	"github.com/cheetahfox/longping/config"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -168,12 +166,11 @@ var (
 // updatedHistogramMetrics updates the histogram metrics with the latest ping latency
 func updatedHistogramMetrics(hostname string, s probing.Statistics) {
 	// Update the histogram with the latest ping latency
-	if config.Config.Debug {
-		fmt.Printf("Updating histogram for %s with latency %d ns\n", hostname, s.Addr)
-	}
+	slog.Debug("Updating histogram for %s with latency %d ns\n", hostname, s.Addr)
 
 	// loop through the RTTs this covers cases where there are multiple RTTs
 	for _, rtts := range s.Rtts {
+
 		PingLatencyNs.WithLabelValues(hostname, s.Addr).Observe(float64(rtts.Nanoseconds()))
 	}
 }
@@ -181,14 +178,6 @@ func updatedHistogramMetrics(hostname string, s probing.Statistics) {
 // I hate how this is just a big list of metrics that need to be updated
 func prometheusUpdateMetrics(hostname string, pIp *ipRings) {
 	// Update the metrics with the values from the ipRings struct
-	if config.Config.Debug {
-		sd, err := TotalSent.GetMetricWith(prometheus.Labels{"hostname": hostname, "ip_address": pIp.Ip.String()})
-		if err != nil {
-			fmt.Println("Error getting TotalSent metric:", err)
-		}
-		fmt.Printf("Total-Sent pings for %s\n", hostname)
-		spew.Dump(sd)
-	}
 	TotalSent.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalSent))
 	TotalReceived.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalReceived))
 	TotalLoss.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.TotalLoss))
@@ -211,10 +200,4 @@ func prometheusUpdateMetrics(hostname string, pIp *ipRings) {
 	Max15LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Max15LatencyNs))
 	Min15LatencyNs.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Min15LatencyNs))
 	Packetloss15.WithLabelValues(hostname, pIp.Ip.String()).Set(float64(pIp.Packetloss15))
-
-	//TotalPingsSent.WithLabelValues(hostname, pIp.Ip.String()).Inc()
-
-	if config.Config.Debug {
-		fmt.Printf("Updated Prometheus metrics for %s\n", hostname)
-	}
 }

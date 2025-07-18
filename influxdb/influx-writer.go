@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"time"
 
@@ -16,7 +17,7 @@ Creates a new InfluxDB connection and stores it in the global variable DbWrite
 func NewInfluxConnection(config config.InfluxConfiguration) {
 	err := ConnectInflux(config)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error connecting to InfluxDB: " + err.Error())
 	}
 }
 
@@ -29,9 +30,7 @@ func WriteRingMetrics(frequency int) {
 			for index := 0; index < len(stats.RingHosts[host].Ips); index++ {
 				hn := stats.RingHosts[host].Hostname
 				ip := stats.RingHosts[host].Ips[index].Ip
-				if config.Config.Debug {
-					start = time.Now()
-				}
+				start = time.Now()
 
 				writeInflux("longping", hn, ip, "Total Packets Sent", float64(stats.RingHosts[host].Ips[index].TotalSent))
 				writeInflux("longping", hn, ip, "Total Packets Revc", float64(stats.RingHosts[host].Ips[index].TotalReceived))
@@ -57,27 +56,21 @@ func WriteRingMetrics(frequency int) {
 				writeInflux("longping", hn, ip, "100 Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter100LatencyNs.Nanoseconds()))
 				writeInflux("longping", hn, ip, "1k Packet Jitter", float64(stats.RingHosts[host].Ips[index].Jitter1000LatencyNs.Nanoseconds()))
 
-				if config.Config.Debug {
-					elapsed := time.Since(start)
-					fmt.Println("Time to write to InfluxDB: " + elapsed.String())
-				}
+				elapsed := time.Since(start)
+				slog.Debug("Time to write to InfluxDB: " + elapsed.String())
 			}
 		}
 	}
 }
 
 func writeInflux(measure string, host string, ip net.IP, metric string, value float64) {
-	if config.Config.Debug {
-		s := fmt.Sprintf("%f", value)
-		fmt.Println("Writing point --->  Measure: " + measure + " Host: " + host + " Metric: " + metric + " Value: " + s)
-	}
-
+	s := fmt.Sprintf("%f", value)
+	slog.Debug("Writing point --->  Measure: " + measure + " Host: " + host + " Metric: " + metric + " Value: " + s)
 	p := influxdb2.NewPointWithMeasurement(measure)
 
 	p.AddTag("Host", host)
 	p.AddTag("Ip", ip.String())
 	p.SetTime(time.Now())
-
 	p.AddField(metric, value)
 
 	DbWrite.WritePoint(p)
