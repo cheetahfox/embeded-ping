@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 type Configuration struct {
 	FiberConfig   fiber.Config
-	Debug         bool
+	LogLevel      string
 	InfluxEnabled bool
 	ProbeInterval int
 	ProbeTimeout  int
@@ -41,8 +42,8 @@ func Startup() error {
 		ReadTimeout:   (30 * time.Second),
 	}
 
-	if os.Getenv("DEBUG") == "true" {
-		Config.Debug = true
+	if os.Getenv("LOG_LEVEL") != "" {
+		Config.LogLevel = os.Getenv("LOG_LEVEL")
 	}
 
 	if os.Getenv("INFLUX_ENABLED") == "true" {

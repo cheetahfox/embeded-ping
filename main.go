@@ -35,7 +35,11 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	var appLevel = new(slog.LevelVar)
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: appLevel,
+	}))
 	slog.SetDefault(logger)
 
 	slog.Info("Startup")
@@ -43,6 +47,22 @@ func main() {
 	if err != nil {
 		slog.Error("Error in config.Startup:" + err.Error())
 		panic(err)
+	}
+
+	if config.Config.LogLevel != "" {
+		switch config.Config.LogLevel {
+		case "debug":
+			appLevel.Set(slog.LevelDebug)
+		case "info":
+			appLevel.Set(slog.LevelInfo)
+		case "warn":
+			appLevel.Set(slog.LevelWarn)
+		case "error":
+			appLevel.Set(slog.LevelError)
+		default:
+			appLevel.Set(slog.LevelInfo)
+		}
+		slog.Info("Log level set to " + config.Config.LogLevel)
 	}
 
 	hosts := config.GetHosts()
