@@ -49,6 +49,7 @@ func main() {
 		panic(err)
 	}
 
+	// Set the log level based on the config that was loaded from the environment.
 	if config.Config.LogLevel != "" {
 		switch config.Config.LogLevel {
 		case "debug":
