@@ -512,7 +512,6 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 		Jitter = totalDiff / int64(len(diffRtts))
 	}
 
-	slog.Debug("Jitter: ", Jitter)
 	return time.Duration(Jitter)
 }
 

@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -165,13 +166,11 @@ var (
 
 // updatedHistogramMetrics updates the histogram metrics with the latest ping latency
 func updatedHistogramMetrics(hostname string, s probing.Statistics) {
-	// Update the histogram with the latest ping latency
-	slog.Debug("Updating histogram for %s with latency %d ns\n", hostname, s.Addr)
-
 	// loop through the RTTs this covers cases where there are multiple RTTs
 	for _, rtts := range s.Rtts {
-
 		PingLatencyNs.WithLabelValues(hostname, s.Addr).Observe(float64(rtts.Nanoseconds()))
+		mesg := fmt.Sprintf("Updating histogram for %s with latency %d ms", hostname, rtts.Milliseconds())
+		slog.Debug(mesg)
 	}
 }
 
