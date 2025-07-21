@@ -2,15 +2,15 @@
 This is a small program to ping devices once a second and then ship the results off to a influxdb
 database.
 
-The main motivation here is to track long-term changes in link opperation.
+The main motivation here is to track long-term changes in link operation.
 
-Because we compute loss rates several different ways. First we do a pretty standard perodic ping.
+Because we compute loss rates several different ways. First we do a pretty standard periodic ping.
 I intend this to be samples of between 2-15 seconds. For these samples we store them normally into the tsdb.
 But we also maintain stats on the last 100/1000 packets (should be configurable?). We then store these metrics
-into the tsdb also. This can allow for long term changes to be monitored over time and not just perodic changes.
+into the tsdb also. This can allow for long term changes to be monitored over time and not just periodic changes.
 
 For example. lets say you start drop 5 packets every 45 seconds. This loss will only show up in a single sample.
-But over the past 100/1000 packets this will be noticable as a up tick in loss over a much longer period of time.
+But over the past 100/1000 packets this will be noticeable as a up tick in loss over a much longer period of time.
 
 Joshua Snyder 9/14/2022
 */
