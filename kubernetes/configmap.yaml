@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: longping-config
+  namespace: apps
+data:
+  HOSTS: "8.8.8.8 github.com"
+  INFLUX_ENABLED: "false"
+  DEBUG: "false"
