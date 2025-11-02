@@ -1,8 +1,11 @@
-module github.com/cheetahfox/embeded-ping
+module github.com/cheetahfox/longping
 
-go 1.18
+go 1.22
+
+toolchain go1.22.12
 
 require (
+	github.com/ansrivas/fiberprometheus/v2 v2.8.0
 	github.com/cheetahfox/Iot-local-midware v0.1.2
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
@@ -21,8 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.51.0 // indirect
-	github.com/valyala/fasttemplate v1.2.1 // indirect
+	github.com/valyala/fasthttp v1.57.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
@@ -31,5 +33,5 @@ require (
 
 require (
 	github.com/prometheus-community/pro-bing v0.1.0
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 )

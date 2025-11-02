@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +13,8 @@ import (
 
 type Configuration struct {
 	FiberConfig   fiber.Config
-	Debug         bool
+	LogLevel      string
+	InfluxEnabled bool
 	ProbeInterval int
 	ProbeTimeout  int
 }
@@ -35,13 +37,17 @@ func Startup() error {
 	Config.FiberConfig = fiber.Config{
 		CaseSensitive: true,
 		StrictRouting: true,
-		ServerHeader:  "Emb-Ping",
-		AppName:       "Embeded Ping v1.0.1",
+		ServerHeader:  "Long-Ping",
+		AppName:       "Long Ping v1.1.0",
 		ReadTimeout:   (30 * time.Second),
 	}
 
-	if os.Getenv("DEBUG") == "true" {
-		Config.Debug = true
+	if os.Getenv("LOG_LEVEL") != "" {
+		Config.LogLevel = os.Getenv("LOG_LEVEL")
+	}
+
+	if os.Getenv("INFLUX_ENABLED") == "true" {
+		Config.InfluxEnabled = true
 	}
 
 	// Set the Probe Interval
