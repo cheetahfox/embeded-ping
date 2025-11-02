@@ -1,6 +1,7 @@
 package health
 
 import (
+	"github.com/cheetahfox/longping/config"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,7 +17,7 @@ func GetHealthz(c *fiber.Ctx) error {
 }
 
 func GetReadyz(c *fiber.Ctx) error {
-	if !InfluxReady {
+	if !InfluxReady && config.Config.InfluxEnabled {
 		return c.SendStatus(503)
 	}
 	return c.SendStatus(200)

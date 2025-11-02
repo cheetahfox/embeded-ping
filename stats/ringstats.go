@@ -9,13 +9,15 @@ package stats
 import (
 	"container/ring"
 	"errors"
-	"fmt"
+	"log/slog"
 	"math"
 	"net"
+	"strconv"
+
 	"sync"
 	"time"
 
-	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/longping/config"
 
 	probing "github.com/prometheus-community/pro-bing"
 )
@@ -59,7 +61,7 @@ var RingHosts map[string]*RingStats
 /*
 Add a new Ring Host for monitoring; we don't lock it since we aren't messing with the ring
 We do DNS resolution and for each IP address we find we are going to init a stats ring for
-the last 100 and 1k packets.
+our default packet windows for he last 15, 100 and 1k packets.
 */
 func RegisterRingHost(host string) error {
 
@@ -70,6 +72,7 @@ func RegisterRingHost(host string) error {
 
 	ips, err := net.LookupIP(host)
 	if err != nil {
+		delete(RingHosts, host) // If we can't resolve the host, remove it from the map
 		return err
 	}
 
@@ -82,14 +85,11 @@ func RegisterRingHost(host string) error {
 
 		// Here we don't care that we are copying a struct with a mutex because this is the initialization of the ring.
 		RingHosts[host].Ips = append(RingHosts[host].Ips, newRing)
-
-		fmt.Println("Registered Hostname: " + host + " With Ip Address: " + ip.String())
+		slog.Debug("Registered Hostname: " + host + " With Ip Address: " + ip.String())
 	}
 
-	fmt.Println("---- Done adding ----")
-
+	slog.Debug(" Done adding host: " + host)
 	ringCollector(host, 1, 1)
-
 	return nil
 }
 
@@ -104,21 +104,21 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 		// Check for incoming shutdown and return if we get one.
 		select {
 		case <-pIp.shutdown:
-			fmt.Println("thread shutdown for : " + host + " ---> " + pIp.Ip.String())
+			slog.Info("thread shutdown for : " + host + " ---> " + pIp.Ip.String())
 			return
 		default:
 		}
 		startTime := time.Now()
 		pinger, err := probing.NewPinger(pIp.Ip.String())
 		if err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			return
 		}
 		pinger.Count = packets
 		pinger.Timeout = time.Second * time.Duration(config.Config.ProbeTimeout)
 		err = pinger.Run() // Blocks until finished.
 		if err != nil {
-			fmt.Println(err)
+			slog.Error(err.Error())
 			return
 		}
 
@@ -126,6 +126,15 @@ func pingThread(pIp *ipRings, seconds int, packets int, host string) {
 
 		ringParseStats(*stats, pIp, host, startTime)
 	}
+}
+
+/*
+This function is going to be called by the main loop to make sure we don't have any
+ping packets that should be removed from the ring due to timing out. Normally we don't
+remove packets anywhere else.
+*/
+func ringMaintance(s probing.Statistics, pIp *ipRings, host string, startTime time.Time) {
+
 }
 
 /*
@@ -163,7 +172,7 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	// Generate arrays of ping packets for storage long term
 	pingPackets, err := generatePingPackets(s, startTime)
 	if err != nil {
-		fmt.Println("unable to generate ping packets")
+		slog.Warn("unable to generate ping packets")
 	}
 
 	pIp.Mu.Lock()
@@ -178,18 +187,18 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	for _, ping := range pingPackets {
 		err := ringAddStats(ping, pIp.Stats100)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " --->  100 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " --->  100 ring")
 		}
 		err = ringAddStats(ping, pIp.Stats1k)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " ---> 1000 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " ---> 1000 ring")
 		}
 		err = ringAddStats(ping, pIp.Stats15)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println(" Host: " + hostname + " ---> 15 ring")
+			slog.Warn(err.Error())
+			slog.Warn(" Host: " + hostname + " ---> 15 ring")
 		}
 	}
 
@@ -212,12 +221,16 @@ func ringParseStats(s probing.Statistics, pIp *ipRings, hostname string, startTi
 	pIp.Min15LatencyNs = genMinLatency(pIp.Stats15)
 	pIp.Min100LatencyNs = genMinLatency(pIp.Stats100)
 	pIp.Min1000LatencyNs = genMinLatency(pIp.Stats1k)
+
+	// Update the prometheus metrics
+	prometheusUpdateMetrics(hostname, pIp)
+	updatedHistogramMetrics(hostname, s)
 }
 
 /*
 Take a probing.Statistics and return an slice of pings.
 If there are no pings in the out we still create blank packets
-Also we don't a super accurate sent time so we are just going add 1000ms to the start
+Also we don't have a super accurate sent time so we are just going add 1000ms to the start
 for every additional packet in s. Luckly since the plan is to run only 1 packet pings
 the startTime should be very close to the true sent. But this might be an issue if we
 many packets in a s stats.
@@ -232,7 +245,8 @@ func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, err
 	for i := range s.Rtts {
 		var p ping
 		p.rtts = s.Rtts[i]
-		p.sent = startTime.Add(time.Duration(i) * time.Second)
+		p.sent = startTime
+		p.received = startTime.Add(p.rtts)
 		p.replyReceived = true
 		packets = append(packets, p)
 	}
@@ -245,7 +259,8 @@ func generatePingPackets(s probing.Statistics, startTime time.Time) ([]ping, err
 				We are taking the number of packets we got and adding the dropped packets at the end of the window
 				Also adding the probe timeout to the sent time for each dropped packet.
 			*/
-			p.sent = startTime.Add(time.Duration(len(s.Rtts)+x) * time.Second)
+			p.sent = startTime
+			p.received = startTime.Add(time.Duration(config.Config.ProbeTimeout) * time.Second)
 			p.replyReceived = false
 			packets = append(packets, p)
 		}
@@ -278,7 +293,7 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 				inserted = true
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		// blank value so we can insert.
 		default:
 			stats.Value = packet
@@ -297,8 +312,8 @@ func ringAddStats(packet ping, stats *ring.Ring) error {
 		We should never get here but if we do we need to know about it. So here is some debug info.
 	*/
 	if !inserted {
-		fmt.Println("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
-		fmt.Println("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		slog.Warn("Value sent time  : " + stats.Value.(ping).sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
+		slog.Warn("Packet sent time : " + packet.sent.Format("2006-01-02T15:04:05.999999999Z07:00"))
 		err := errors.New("unable to insert into ring")
 		return err
 	}
@@ -319,7 +334,7 @@ func ringOldestPacket(stats *ring.Ring) ping {
 				oldest = stats.Value.(ping)
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		stats = stats.Next()
@@ -329,7 +344,7 @@ func ringOldestPacket(stats *ring.Ring) ping {
 }
 
 /*
-Find if we have open slots in the ring
+Find if we have open slots in the ring for pings
 */
 func ringOpenSlots(stats *ring.Ring) bool {
 	ringSize := stats.Len()
@@ -337,7 +352,7 @@ func ringOpenSlots(stats *ring.Ring) bool {
 		switch v := stats.Value.(type) {
 		case ping:
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 			return true
 		}
@@ -361,13 +376,12 @@ func genPacketloss(ring *ring.Ring) float64 {
 				droppedPackets++
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
 	}
 
-	//fmt.Printf("Found dropped packets = %d\n", droppedPackets)
 	packetLoss = float64(droppedPackets) / float64(ringSize)
 
 	return packetLoss
@@ -390,7 +404,7 @@ func genAvgLatency(ring *ring.Ring) time.Duration {
 				emptyPackets++
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 			emptyPackets++
 		}
@@ -423,7 +437,7 @@ func genMaxLatency(ring *ring.Ring) time.Duration {
 				}
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -448,7 +462,7 @@ func genMinLatency(ring *ring.Ring) time.Duration {
 				}
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -474,7 +488,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 				absRtts = append(absRtts, v.rtts)
 			}
 		case int:
-			fmt.Println(v)
+			slog.Debug(strconv.Itoa(v))
 		default:
 		}
 		ring = ring.Next()
@@ -488,6 +502,7 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 	}
 
 	// Calculate the average of the absolute values of the differences
+	// here we take advantage of the fact that time.duration is really a int64 of NanoSeconds
 	var totalDiff int64
 	for _, v := range diffRtts {
 		totalDiff = totalDiff + absInt(int64(v))
@@ -495,10 +510,6 @@ func genJitterLatency(ring *ring.Ring) time.Duration {
 
 	if len(diffRtts) != 0 {
 		Jitter = totalDiff / int64(len(diffRtts))
-	}
-
-	if config.Config.Debug {
-		fmt.Println("Jitter: ", Jitter)
 	}
 
 	return time.Duration(Jitter)

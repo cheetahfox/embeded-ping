@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cheetahfox/Iot-local-midware/health"
-	"github.com/cheetahfox/embeded-ping/config"
+	"github.com/cheetahfox/longping/config"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/influxdata/influxdb-client-go/v2/domain"
