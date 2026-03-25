@@ -14,6 +14,7 @@ import (
 type Configuration struct {
 	FiberConfig   fiber.Config
 	LogLevel      string
+	Ipv6Enabled   bool
 	InfluxEnabled bool
 	ProbeInterval int
 	ProbeTimeout  int
@@ -64,6 +65,11 @@ func Startup() error {
 		Config.ProbeTimeout = 1
 	} else {
 		Config.ProbeTimeout = probeTimeout
+	}
+
+	// Enable IPv6 if the Env variable is set to true
+	if os.Getenv("IPV6_ENABLED") == "true" {
+		Config.Ipv6Enabled = true
 	}
 
 	return nil

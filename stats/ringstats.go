@@ -77,6 +77,12 @@ func RegisterRingHost(host string) error {
 	}
 
 	for _, ip := range ips {
+		// Check if we are trying to add an IPv6 address when IPv6 is disabled
+		if ip.To4() == nil && config.Config.Ipv6Disabled {
+			slog.Warn("Skipping IPv6 address for host: " + host + " ---> " + ip.String())
+			return nil
+		}
+
 		var newRing ipRings
 		newRing.Ip = ip
 		newRing.Stats1k = ring.New(1000)
