@@ -7,7 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.8.0
 	github.com/cheetahfox/Iot-local-midware v0.1.2
-	github.com/gofiber/fiber/v2 v2.52.12
+	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/influxdata/influxdb-client-go/v2 v2.10.0
 	github.com/prometheus/client_golang v1.20.5
 )
